@@ -8,6 +8,23 @@ Requirements
 
 Python 3.6 or later. No other libraries are required.
 
+Installation
+------------
+
+``rsrcfork`` is available `on PyPI`__ and can be installed using ``pip``: 
+
+.. code-block:: sh
+
+	python3 -m pip install rsrcfork
+
+Alternatively you can run the ``setup.py`` script manually:
+
+.. code-block:: sh
+
+	python3 setup.py install
+
+__ https://pypi.python.org/pypi/rsrcfork
+
 Features
 --------
 
@@ -59,8 +76,8 @@ Further info on resource files
 Sources of information about the resource fork data format, and the structure of common resource types:
 
 * Inside Macintosh, Volume I, Chapter 5 "The Resource Manager". This book can probably be obtained in physical form somewhere, but the relevant chapter/book is also available in a few places online:
-	* `Apple's legacy documentation`__
-	* pagetable.com, a site that happened to have a copy of the book: `info blog post`__, `direct download`__
+	- `Apple's legacy documentation`__
+	- pagetable.com, a site that happened to have a copy of the book: `info blog post`__, `direct download`__
 * `Wikipedia`__, of course
 * The `Resource Fork`__ article on "Just Solve the File Format Problem" (despite the title, this is a decent site and not clickbait)
 * The `KSFL`__ library (and `its wiki`__), written in Java, which supports reading and writing resource files
