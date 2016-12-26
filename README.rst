@@ -61,6 +61,33 @@ Automatic selection of data/resource fork
 	>>> resourcerf._stream
 	<_io.BufferedReader name='/Users/Shared/Test.textClipping/..namedfork/rsrc'>
 
+Command-line interface
+``````````````````````
+
+.. code-block:: sh
+	$ python3 -m rsrcfork /Users/Shared/Test.textClipping
+	No header system data
+	No header application data
+	No file attributes
+	4 resource types:
+	'utxt': 1 resources:
+	(256), unnamed, no attributes, 34 bytes
+	
+	'utf8': 1 resources:
+	(256), unnamed, no attributes, 17 bytes
+	
+	'TEXT': 1 resources:
+	(256), unnamed, no attributes, 17 bytes
+	
+	'drag': 1 resources:
+	(128), unnamed, no attributes, 64 bytes
+	
+	$ python3 -m rsrcfork /Users/Shared/Test.textClipping "'TEXT' (256)"
+	Resource 'TEXT' (256), unnamed, no attributes, 17 bytes:
+	00000000 48 65 72 65 20 69 73 20 73 6f 6d 65 20 74 65 78 |Here is some tex|
+	00000010 74                                              |t               |
+	
+
 Limitations
 -----------
 
@@ -107,3 +134,16 @@ __ https://archive.org/web/
 __ http://archive.is/
 
 __ https://archive.fo/
+
+Changelog
+---------
+
+Version 1.1.0
+`````````````
+
+* Added a command-line interface - run ``python3 -m rsrcfork --help`` for more info
+
+Version 1.0.0
+`````````````
+
+* Initial version
