@@ -26,5 +26,6 @@ setuptools.setup(
 		"Programming Language :: Python :: 3.6",
 	],
 	keywords="rsrc fork resource manager macintosh mac macos",
+	python_requires=">=3.6",
 	py_modules=["rsrcfork"],
 )
