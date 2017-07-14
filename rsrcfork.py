@@ -345,14 +345,16 @@ class ResourceFile(collections.abc.Mapping):
 		self._reference_counts: typing.MutableMapping[bytes, int] = collections.OrderedDict()
 		
 		(type_list_length_m1,) = self._stream_unpack(STRUCT_RESOURCE_TYPE_LIST_HEADER)
+		type_list_length = (type_list_length_m1 + 1) % 0x10000
 		
-		for _ in range(type_list_length_m1 + 1):
+		for _ in range(type_list_length):
 			(
 				resource_type,
 				count_m1,
 				reflist_offset,
 			) = self._stream_unpack(STRUCT_RESOURCE_TYPE)
-			self._reference_counts[resource_type] = count_m1 + 1
+			count = (count_m1 + 1) % 0x10000
+			self._reference_counts[resource_type] = count
 	
 	def _read_all_references(self):
 		"""Read all resource references, starting at the current stream position."""
@@ -745,25 +747,28 @@ def main(args: typing.Sequence[str]):
 			else:
 				print("No file attributes")
 			
-			print(f"{len(rf)} resource types:")
-			for typecode, resources in rf.items():
-				restype = _bytes_escape(typecode, quote="'")
-				print(f"'{restype}': {len(resources)} resources:")
-				for resid, res in rf[typecode].items():
-					if res.name is None:
-						name = "unnamed"
-					else:
-						name = _bytes_escape(res.name, quote='"')
-						name = f'name "{name}"'
-					
-					attrs = _decompose_flags(res.attributes)
-					if attrs:
-						attrdesc = " | ".join(attr.name for attr in attrs)
-					else:
-						attrdesc = "no attributes"
-					
-					print(f"({resid}), {name}, {attrdesc}, {len(res.data)} bytes")
-				print()
+			if len(rf) > 0:
+				print(f"{len(rf)} resource types:")
+				for typecode, resources in rf.items():
+					restype = _bytes_escape(typecode, quote="'")
+					print(f"'{restype}': {len(resources)} resources:")
+					for resid, res in rf[typecode].items():
+						if res.name is None:
+							name = "unnamed"
+						else:
+							name = _bytes_escape(res.name, quote='"')
+							name = f'name "{name}"'
+						
+						attrs = _decompose_flags(res.attributes)
+						if attrs:
+							attrdesc = " | ".join(attr.name for attr in attrs)
+						else:
+							attrdesc = "no attributes"
+						
+						print(f"({resid}), {name}, {attrdesc}, {len(res.data)} bytes")
+					print()
+			else:
+				print("No resource types (empty resource file)")
 	
 	sys.exit(0)
 

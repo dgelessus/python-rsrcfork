@@ -138,6 +138,11 @@ __ https://archive.fo/
 Changelog
 ---------
 
+Version 1.1.1
+`````````````
+
+* Fixed overflow issue with empty resource files or empty resource type entries
+
 Version 1.1.0
 `````````````
 
