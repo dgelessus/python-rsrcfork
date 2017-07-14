@@ -85,7 +85,8 @@ Command-line interface
 	$ python3 -m rsrcfork /Users/Shared/Test.textClipping "'TEXT' (256)"
 	Resource 'TEXT' (256), unnamed, no attributes, 17 bytes:
 	00000000 48 65 72 65 20 69 73 20 73 6f 6d 65 20 74 65 78 |Here is some tex|
-	00000010 74                                              |t               |
+	00000010 74                                              |t|
+	00000011
 	
 
 Limitations
@@ -142,6 +143,7 @@ Version 1.1.1
 `````````````
 
 * Fixed overflow issue with empty resource files or empty resource type entries
+* Changed ``_hexdump`` to behave more like ``hexdump -C``
 
 Version 1.1.0
 `````````````

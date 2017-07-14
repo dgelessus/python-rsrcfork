@@ -577,7 +577,10 @@ def _hexdump(data: bytes):
 		line = data[i:i + 16]
 		line_hex = " ".join(f"{byte:02x}" for byte in line)
 		line_char = line.decode("MacRoman").translate(_TRANSLATE_NONPRINTABLES)
-		print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char:<16}|")
+		print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char}|")
+	
+	if data:
+		print(f"{len(data):08x}")
 
 def _raw_hexdump(data: bytes):
 	for i in range(0, len(data), 16):
