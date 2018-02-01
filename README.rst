@@ -139,6 +139,12 @@ __ https://archive.fo/
 Changelog
 ---------
 
+Version 1.1.2
+`````````````
+
+* Added support for the resource file attributes "Resources Locked" and "Printer Driver MultiFinder Compatible" from ResEdit.
+* Added more dummy constants for resource attributes with unknown meaning, so that resource files containing such attributes can be loaded without errors.
+
 Version 1.1.1
 `````````````
 

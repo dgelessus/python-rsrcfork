@@ -79,6 +79,14 @@ STRUCT_RESOURCE_NAME_HEADER = struct.Struct(">B")
 class ResourceFileAttrs(enum.Flag):
 	"""Resource file attribute flags. The descriptions for these flags are taken from comments on the map*Bit and map* enum constants in <CarbonCore/Resources.h>."""
 	
+	mapResourcesLocked = 32768 # "Resources Locked" (undocumented, but available as a checkbox in ResEdit)
+	_UNKNOWN_16384 = 16384
+	_UNKNOWN_8192 = 8192
+	_UNKNOWN_4096 = 4096
+	_UNKNOWN_2048 = 2048
+	_UNKNOWN_1024 = 1024
+	_UNKNOWN_512 = 512
+	mapPrinterDriverMultiFinderCompatible = 256 # "Printer Driver MultiFinder Compatible" (undocumented, but available as a checkbox in ResEdit)
 	mapReadOnly = 128 # "is this file read-only?", "Resource file read-only"
 	mapCompact = 64 # "Is a compact necessary?", "Compact resource file"
 	mapChanged = 32 # "Is it necessary to write map?", "Write map out at update"
