@@ -7,7 +7,7 @@ with open("README.rst", "r", encoding="utf-8") as f:
 
 setuptools.setup(
 	name="rsrcfork",
-	version="1.1.1",
+	version="1.1.2",
 	description="A pure Python library for reading old Macintosh resource manager data",
 	long_description=long_description,
 	url="https://github.com/dgelessus/python-rsrcfork",

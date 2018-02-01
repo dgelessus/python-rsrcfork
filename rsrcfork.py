@@ -22,7 +22,7 @@ __all__ = [
 	"open",
 ]
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 # Translation table to replace ASCII non-printable characters with periods.
 _TRANSLATE_NONPRINTABLES = {k: "." for k in [*range(0x20), 0x7f]}
