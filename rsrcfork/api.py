@@ -208,9 +208,9 @@ class ResourceFile(collections.abc.Mapping):
 			f = open(filename, "rb")
 		
 		# Use the selected fork to build a ResourceFile.
-		return cls(f, **kwargs)
+		return cls(f, close=True, **kwargs)
 	
-	def __init__(self, stream: typing.io.BinaryIO, *, allow_seek: typing.Optional[bool]=None, close: bool=True):
+	def __init__(self, stream: typing.io.BinaryIO, *, allow_seek: typing.Optional[bool]=None, close: bool=False):
 		"""Create a ResourceFile wrapping the given byte stream.
 		
 		To read resource file data from a bytes object, wrap it in an io.BytesIO.
@@ -219,7 +219,7 @@ class ResourceFile(collections.abc.Mapping):
 		If seeking is used, only the file header, map header, resource types, and resource references are read into memory. Resource data and names are loaded on-demand when the respective resource is accessed.
 		If seeking is not used, the entire stream is processed sequentially and read into memory, including all resource data and names. This may be necessary when the stream does not support seeking at all. Memory is usually not a concern, most resource files are not even a megabyte in size.
 		
-		close controls whether the stream should be closed when the ResourceFile's close method is called.
+		close controls whether the stream should be closed when the ResourceFile's close method is called. By default this is False.
 		"""
 		
 		super().__init__()
@@ -393,7 +393,10 @@ class ResourceFile(collections.abc.Mapping):
 		self._read_all_resource_names()
 	
 	def close(self):
-		"""Close the underlying stream, unless this behavior was suppressed by passing close=False to the constructor. If seeking is enabled for this ResourceFile, resources can no longer be read after closing the stream. On the other hand, if seeking is disabled, closing the stream does not affect the ResourceFile."""
+		"""Close this ResourceFile.
+		
+		If close=True was passed when this ResourceFile was created, the underlying stream's close method is called as well.
+		"""
 		
 		if self._close_stream:
 			self._stream.close()
