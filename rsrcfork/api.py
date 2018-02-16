@@ -188,13 +188,18 @@ class ResourceFile(collections.abc.Mapping):
 				# If the resource fork doesn't exist, fall back to the data fork.
 				f = open(filename, "rb")
 			else:
-				# Resource fork exists, check if it actually contains anything.
-				if f.read(1):
-					# Resource fork contains data, seek back to start before using it.
-					f.seek(0)
-				else:
-					# Resource fork contains no data, fall back to the data fork.
-					f = open(filename, "rb")
+				try:
+					# Resource fork exists, check if it actually contains anything.
+					if f.read(1):
+						# Resource fork contains data, seek back to start before using it.
+						f.seek(0)
+					else:
+						# Resource fork contains no data, fall back to the data fork.
+						f.close()
+						f = open(filename, "rb")
+				except BaseException:
+					f.close()
+					raise
 		elif rsrcfork:
 			# Force use of the resource fork.
 			f = open(os.path.join(filename, "..namedfork", "rsrc"), "rb")
@@ -222,18 +227,22 @@ class ResourceFile(collections.abc.Mapping):
 		self._close_stream: bool = close
 		self._stream: typing.io.BinaryIO = stream
 		
-		self._allow_seek: bool
-		if allow_seek is None:
-			self._allow_seek = self._stream.seekable()
-		else:
-			self._allow_seek = allow_seek
-		
-		if self._allow_seek:
-			self._pos = None
-			self._init_seeking()
-		else:
-			self._pos: int = 0
-			self._init_streaming()
+		try:
+			self._allow_seek: bool
+			if allow_seek is None:
+				self._allow_seek = self._stream.seekable()
+			else:
+				self._allow_seek = allow_seek
+			
+			if self._allow_seek:
+				self._pos = None
+				self._init_seeking()
+			else:
+				self._pos: int = 0
+				self._init_streaming()
+		except BaseException:
+			self.close()
+			raise
 	
 	def _tell(self) -> int:
 		"""Get the current position in the stream. This uses the stream's tell method if seeking is enabled, and an internal counter otherwise."""
