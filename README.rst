@@ -104,37 +104,15 @@ Further info on resource files
 Sources of information about the resource fork data format, and the structure of common resource types:
 
 * Inside Macintosh, Volume I, Chapter 5 "The Resource Manager". This book can probably be obtained in physical form somewhere, but the relevant chapter/book is also available in a few places online:
-	- `Apple's legacy documentation`__
-	- pagetable.com, a site that happened to have a copy of the book: `info blog post`__, `direct download`__
-* `Wikipedia`__, of course
-* The `Resource Fork`__ article on "Just Solve the File Format Problem" (despite the title, this is a decent site and not clickbait)
-* The `KSFL`__ library (and `its wiki`__), written in Java, which supports reading and writing resource files
-* Apple's macOS SDK, which is distributed with Xcode. The latest version of Xcode is available for free from the Mac App Store. Current and previous versions can be downloaded from `the Apple Developer download page`__. Accessing these downloads requires an Apple ID with (at least) a free developer program membership.
+	- `Apple's legacy documentation <https://developer.apple.com/legacy/library/documentation/mac/pdf/MoreMacintoshToolbox.pdf>`_
+	- pagetable.com, a site that happened to have a copy of the book: `info blog post <http://www.pagetable.com/?p=50>`_, `direct download <http://www.weihenstephan.org/~michaste/pagetable/mac/Inside_Macintosh.pdf>`_
+* `Wikipedia <https://en.wikipedia.org/wiki/Resource_fork>`_, of course
+* The `Resource Fork <http://fileformats.archiveteam.org/wiki/Resource_Fork>`_ article on "Just Solve the File Format Problem" (despite the title, this is a decent site and not clickbait)
+* The `KSFL <https://github.com/kreativekorp/ksfl>`_ library (and `its wiki <https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format>`_), written in Java, which supports reading and writing resource files
+* Apple's macOS SDK, which is distributed with Xcode. The latest version of Xcode is available for free from the Mac App Store. Current and previous versions can be downloaded from `the Apple Developer download page <https://developer.apple.com/download/more/>`_. Accessing these downloads requires an Apple ID with (at least) a free developer program membership.
 * Apple's MPW (Macintosh Programmer's Workshop) and related developer tools. These were previously available from Apple's FTP server at ftp://ftp.apple.com/, which is no longer functional. Because of this, these downloads are only available on mirror sites, such as http://staticky.com/mirrors/ftp.apple.com/.
 
-If these links are no longer functional, some are archived in the `Internet Archive Wayback Machine`__ or `archive.is`__ aka `archive.fo`__.
-
-__ https://developer.apple.com/legacy/library/documentation/mac/pdf/MoreMacintoshToolbox.pdf
-
-__ http://www.pagetable.com/?p=50
-
-__ http://www.weihenstephan.org/~michaste/pagetable/mac/Inside_Macintosh.pdf
-
-__ https://en.wikipedia.org/wiki/Resource_fork
-
-__ http://fileformats.archiveteam.org/wiki/Resource_Fork
-
-__ https://github.com/kreativekorp/ksfl
-
-__ https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format
-
-__ https://developer.apple.com/download/more/
-
-__ https://archive.org/web/
-
-__ http://archive.is/
-
-__ https://archive.fo/
+If these links are no longer functional, some are archived in the `Internet Archive Wayback Machine <https://archive.org/web/>`_ or `archive.is <http://archive.is/>`_ aka `archive.fo <https://archive.fo/>`_.
 
 Changelog
 ---------
