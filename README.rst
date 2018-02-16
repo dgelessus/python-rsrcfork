@@ -37,7 +37,7 @@ Examples
 --------
 
 Simple example
-``````````````
+^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -49,7 +49,7 @@ Simple example
 	<rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(resource_type=b'TEXT', resource_id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
 
 Automatic selection of data/resource fork
-`````````````````````````````````````````
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -62,7 +62,7 @@ Automatic selection of data/resource fork
 	<_io.BufferedReader name='/Users/Shared/Test.textClipping/..namedfork/rsrc'>
 
 Command-line interface
-``````````````````````
+^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: sh
 	$ python3 -m rsrcfork /Users/Shared/Test.textClipping
@@ -140,23 +140,23 @@ Changelog
 ---------
 
 Version 1.1.2
-`````````````
+^^^^^^^^^^^^^
 
 * Added support for the resource file attributes "Resources Locked" and "Printer Driver MultiFinder Compatible" from ResEdit.
 * Added more dummy constants for resource attributes with unknown meaning, so that resource files containing such attributes can be loaded without errors.
 
 Version 1.1.1
-`````````````
+^^^^^^^^^^^^^
 
 * Fixed overflow issue with empty resource files or empty resource type entries
 * Changed ``_hexdump`` to behave more like ``hexdump -C``
 
 Version 1.1.0
-`````````````
+^^^^^^^^^^^^^
 
 * Added a command-line interface - run ``python3 -m rsrcfork --help`` for more info
 
 Version 1.0.0
-`````````````
+^^^^^^^^^^^^^
 
 * Initial version
