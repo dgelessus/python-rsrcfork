@@ -139,6 +139,13 @@ __ https://archive.fo/
 Changelog
 ---------
 
+(next version)
+^^^^^^^^^^^^^^
+
+* Changed the default value of ``ResourceFork.__init__``'s ``close`` keyword argument from ``True`` to ``False``. This matches the behavior of classes like ``zipfile.ZipFile`` and ``tarfile.TarFile``.
+* Fixed ``ResourceFork.open`` and ``ResourceFork.__init__`` not closing their streams in some cases.
+* Refactored the single ``rsrcfork.py`` file into a package. This is an internal change and should have no effect on how the ``rsrcfork`` module is used.
+
 Version 1.1.2
 ^^^^^^^^^^^^^
 
