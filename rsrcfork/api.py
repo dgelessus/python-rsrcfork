@@ -57,34 +57,34 @@ STRUCT_RESOURCE_NAME_HEADER = struct.Struct(">B")
 class ResourceFileAttrs(enum.Flag):
 	"""Resource file attribute flags. The descriptions for these flags are taken from comments on the map*Bit and map* enum constants in <CarbonCore/Resources.h>."""
 	
-	mapResourcesLocked = 32768 # "Resources Locked" (undocumented, but available as a checkbox in ResEdit)
-	_UNKNOWN_16384 = 16384
-	_UNKNOWN_8192 = 8192
-	_UNKNOWN_4096 = 4096
-	_UNKNOWN_2048 = 2048
-	_UNKNOWN_1024 = 1024
-	_UNKNOWN_512 = 512
-	mapPrinterDriverMultiFinderCompatible = 256 # "Printer Driver MultiFinder Compatible" (undocumented, but available as a checkbox in ResEdit)
-	mapReadOnly = 128 # "is this file read-only?", "Resource file read-only"
-	mapCompact = 64 # "Is a compact necessary?", "Compact resource file"
-	mapChanged = 32 # "Is it necessary to write map?", "Write map out at update"
-	_UNKNOWN_16 = 16
-	_UNKNOWN_8 = 8
-	_UNKNOWN_4 = 4
-	_UNKNOWN_2 = 2
-	_UNKNWON_1 = 1
+	mapResourcesLocked = 1 << 15 # "Resources Locked" (undocumented, but available as a checkbox in ResEdit)
+	_BIT_14 = 1 << 14
+	_BIT_13 = 1 << 13
+	_BIT_12 = 1 << 12
+	_BIT_11 = 1 << 11
+	_BIT_10 = 1 << 10
+	_BIT_9 = 1 << 9
+	mapPrinterDriverMultiFinderCompatible = 1 << 8 # "Printer Driver MultiFinder Compatible" (undocumented, but available as a checkbox in ResEdit)
+	mapReadOnly = 1 << 7 # "is this file read-only?", "Resource file read-only"
+	mapCompact = 1 << 6 # "Is a compact necessary?", "Compact resource file"
+	mapChanged = 1 << 5 # "Is it necessary to write map?", "Write map out at update"
+	_BIT_4 = 1 << 4
+	_BIT_3 = 1 << 3
+	_BIT_2 = 1 << 2
+	_BIT_1 = 1 << 1
+	_BIT_0 = 1 << 0
 
 class ResourceAttrs(enum.Flag):
 	"""Resource attribute flags. The descriptions for these flags are taken from comments on the res*Bit and res* enum constants in <CarbonCore/Resources.h>."""
 	
-	resSysRef = 128 # "reference to system/local reference" (only documented as resSysRefBit = 7 in <CarbonCore/Resources.h>
-	resSysHeap = 64 # "In system/in application heap", "System or application heap?"
-	resPurgeable = 32 # "Purgeable/not purgeable", "Purgeable resource?"
-	resLocked = 16 # "Locked/not locked", "Load it in locked?"
-	resProtected = 8 # "Protected/not protected", "Protected?"
-	resPreload = 4 # "Read in at OpenResource?", "Load in on OpenResFile?"
-	resChanged = 2 # "Existing resource changed since last update", "Resource changed?"
-	resCompressed = 1 # "indicates that the resource data is compressed" (only documented in https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format)
+	resSysRef = 1 << 7 # "reference to system/local reference" (only documented as resSysRefBit = 7 in <CarbonCore/Resources.h>
+	resSysHeap = 1 << 6 # "In system/in application heap", "System or application heap?"
+	resPurgeable = 1 << 5 # "Purgeable/not purgeable", "Purgeable resource?"
+	resLocked = 1 << 4 # "Locked/not locked", "Load it in locked?"
+	resProtected = 1 << 3 # "Protected/not protected", "Protected?"
+	resPreload = 1 << 2 # "Read in at OpenResource?", "Load in on OpenResFile?"
+	resChanged = 1 << 1 # "Existing resource changed since last update", "Resource changed?"
+	resCompressed = 1 << 0 # "indicates that the resource data is compressed" (only documented in https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format)
 
 class Resource(object):
 	"""A single resource from a resource file."""
