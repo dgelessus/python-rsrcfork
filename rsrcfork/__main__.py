@@ -160,7 +160,7 @@ def _raw_hexdump(data: bytes):
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
-def main(args: typing.Sequence[str]):
+def main():
 	ap = argparse.ArgumentParser(
 		add_help=False,
 		fromfile_prefix_chars="@",
@@ -194,7 +194,7 @@ def main(args: typing.Sequence[str]):
 	ap.add_argument("file", help="The file to read, or - for stdin")
 	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to display, or omit to show an overview of all resources")
 	
-	ns = ap.parse_args(args)
+	ns = ap.parse_args()
 	
 	ns.fork = {"auto": None, "data": False, "rsrc": True}[ns.fork]
 	ns.read_mode = {"auto": None, "stream": False, "seek": True}[ns.read_mode]
@@ -348,4 +348,4 @@ def main(args: typing.Sequence[str]):
 	sys.exit(0)
 
 if __name__ == "__main__":
-	main(sys.argv[1:])
+	sys.exit(main())

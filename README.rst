@@ -120,6 +120,7 @@ Changelog
 (next version)
 ^^^^^^^^^^^^^^
 
+* Added a setuptools entry point for the command-line interface. This allows calling it using just ``rsrcfork`` instead of ``python3 -m rsrcfork``.
 * Changed the default value of ``ResourceFork.__init__``'s ``close`` keyword argument from ``True`` to ``False``. This matches the behavior of classes like ``zipfile.ZipFile`` and ``tarfile.TarFile``.
 * Fixed ``ResourceFork.open`` and ``ResourceFork.__init__`` not closing their streams in some cases.
 * Refactored the single ``rsrcfork.py`` file into a package. This is an internal change and should have no effect on how the ``rsrcfork`` module is used.
