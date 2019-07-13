@@ -5,7 +5,7 @@ This library only understands the resource file's general structure, i. e. the t
 Writing resource data is not supported at all.
 """
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 __all__ = [
 	"Resource",

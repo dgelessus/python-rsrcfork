@@ -117,8 +117,8 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
-(next version)
-^^^^^^^^^^^^^^
+Version 1.1.3
+^^^^^^^^^^^^^
 
 * Added a setuptools entry point for the command-line interface. This allows calling it using just ``rsrcfork`` instead of ``python3 -m rsrcfork``.
 * Changed the default value of ``ResourceFork.__init__``'s ``close`` keyword argument from ``True`` to ``False``. This matches the behavior of classes like ``zipfile.ZipFile`` and ``tarfile.TarFile``.
