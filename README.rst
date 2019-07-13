@@ -65,6 +65,7 @@ Command-line interface
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: sh
+
 	$ python3 -m rsrcfork /Users/Shared/Test.textClipping
 	No header system data
 	No header application data
@@ -117,8 +118,15 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
+Version 1.1.3.post1
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed a formatting error in the README.rst to allow upload to PyPI.
+
 Version 1.1.3
 ^^^^^^^^^^^^^
+
+**Note: This version is not available on PyPI, see version 1.1.3.post1 changelog for details.**
 
 * Added a setuptools entry point for the command-line interface. This allows calling it using just ``rsrcfork`` instead of ``python3 -m rsrcfork``.
 * Changed the default value of ``ResourceFork.__init__``'s ``close`` keyword argument from ``True`` to ``False``. This matches the behavior of classes like ``zipfile.ZipFile`` and ``tarfile.TarFile``.
