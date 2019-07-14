@@ -1,9 +1,3 @@
-# IntelliJ IDEA, PyCharm, etc.
-.idea
-*.iml
-out
-gen
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
