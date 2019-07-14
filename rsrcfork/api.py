@@ -5,6 +5,8 @@ import os
 import struct
 import typing
 
+from . import compress
+
 # The formats of all following structures is as described in the Inside Macintosh book (see module docstring).
 # Signedness and byte order of the integers is never stated explicitly in IM.
 # All integers are big-endian, as this is the native byte order of the 68k and PowerPC processors used in old Macs.
@@ -89,9 +91,9 @@ class ResourceAttrs(enum.Flag):
 class Resource(object):
 	"""A single resource from a resource file."""
 	
-	__slots__ = ("resource_type", "resource_id", "name", "attributes", "data")
+	__slots__ = ("resource_type", "resource_id", "name", "attributes", "data_raw", "_data_decompressed")
 	
-	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data: bytes):
+	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes):
 		"""Create a new resource with the given type code, ID, name, attributes, and data."""
 		
 		super().__init__()
@@ -100,15 +102,42 @@ class Resource(object):
 		self.resource_id: int = resource_id
 		self.name: typing.Optional[bytes] = name
 		self.attributes: ResourceAttrs = attributes
-		self.data: bytes = data
+		self.data_raw: bytes = data_raw
 	
 	def __repr__(self):
-		if len(self.data) > 32:
-			data = f"<{len(self.data)} bytes: {self.data[:32]}...>"
+		try:
+			data = self.data
+		except compress.DecompressError:
+			decompress_ok = False
+			data = self.data_raw
 		else:
-			data = repr(self.data)
+			decompress_ok = True
 		
-		return f"{type(self).__module__}.{type(self).__qualname__}(resource_type={self.resource_type}, resource_id={self.resource_id}, name={self.name}, attributes={self.attributes}, data={data})"
+		if len(data) > 32:
+			data_repr = f"<{len(data)} bytes: {data[:32]}...>"
+		else:
+			data_repr = repr(data)
+		
+		if not decompress_ok:
+			data_repr = f"<decompression failed - compressed data: {data_repr}>"
+		
+		return f"{type(self).__module__}.{type(self).__qualname__}(resource_type={self.resource_type}, resource_id={self.resource_id}, name={self.name}, attributes={self.attributes}, data={data_repr})"
+	
+	@property
+	def data(self) -> bytes:
+		"""The resource data, decompressed if necessary.
+		
+		Accessing this attribute may raise a DecompressError if the resource data is compressed and could not be decompressed. To access the compressed resource data, use the data_raw attribute.
+		"""
+		
+		if ResourceAttrs.resCompressed in self.attributes:
+			try:
+				return self._data_decompressed
+			except AttributeError:
+				self._data_decompressed = compress.decompress(self.data_raw)
+				return self._data_decompressed
+		else:
+			return self.data_raw
 
 class ResourceFile(collections.abc.Mapping):
 	"""A resource file reader operating on a byte stream."""

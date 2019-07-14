@@ -12,10 +12,11 @@ __all__ = [
 	"ResourceAttrs",
 	"ResourceFile",
 	"ResourceFileAttrs",
+	"compress",
 	"open",
 ]
 
-from . import api
+from . import api, compress
 from .api import Resource, ResourceAttrs, ResourceFile, ResourceFileAttrs
 
 # noinspection PyShadowingBuiltins

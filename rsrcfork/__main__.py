@@ -5,7 +5,7 @@ import sys
 import textwrap
 import typing
 
-from . import __version__, api
+from . import __version__, api, compress
 
 # Translation table to replace ASCII non-printable characters with periods.
 _TRANSLATE_NONPRINTABLES = {k: "." for k in [*range(0x20), 0x7f]}
@@ -186,6 +186,7 @@ def main():
 	ap.add_argument("--version", action="version", version=__version__, help="Display version information and exit")
 	ap.add_argument("-a", "--all", action="store_true", help="When no filters are given, show all resources in full, instead of an overview")
 	ap.add_argument("-f", "--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource data, or auto to guess (default: %(default)s)")
+	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output compressed resource data as-is")
 	ap.add_argument("--format", choices=["dump", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
 	ap.add_argument("--header-system", action="store_true", help="Output system-reserved header data and nothing else")
 	ap.add_argument("--header-application", action="store_true", help="Output application-specific header data and nothing else")
@@ -239,6 +240,11 @@ def main():
 				sys.exit(1)
 			
 			for res in resources:
+				if ns.decompress:
+					data = res.data
+				else:
+					data = res.data_raw
+				
 				if ns.format == "dump":
 					# Human-readable info and hex dump
 					
@@ -254,24 +260,37 @@ def main():
 					else:
 						attrdesc = "no attributes"
 					
+					if ns.decompress:
+						length_desc = f"{len(res.data)} bytes (stored in {len(res.data_raw)} bytes)"
+					else:
+						length_desc = f"{len(data)} bytes"
+					
 					restype = _bytes_escape(res.resource_type, quote="'")
-					print(f"Resource '{restype}' ({res.resource_id}), {name}, {attrdesc}, {len(res.data)} bytes:")
-					_hexdump(res.data)
+					print(f"Resource '{restype}' ({res.resource_id}), {name}, {attrdesc}, {length_desc}:")
+					_hexdump(data)
 					print()
 				elif ns.format == "hex":
 					# Data only as hex
 					
-					_raw_hexdump(res.data)
+					_raw_hexdump(data)
 				elif ns.format == "raw":
 					# Data only as raw bytes
 					
-					sys.stdout.buffer.write(res.data)
+					sys.stdout.buffer.write(data)
 				elif ns.format == "derez":
 					# Like DeRez with no resource definitions
 					
-					attrs = [_REZ_ATTR_NAMES[attr] for attr in _decompose_flags(res.attributes)]
-					if None in attrs:
-						attrs[:] = [f"${res.attributes.value:02X}"]
+					attrs = list(_decompose_flags(res.attributes))
+					
+					if ns.decompress and api.ResourceAttrs.resCompressed in attrs:
+						attrs.remove(api.ResourceAttrs.resCompressed)
+						attrs_comment = " /* was compressed */"
+					else:
+						attrs_comment = ""
+					
+					attr_descs = [_REZ_ATTR_NAMES[attr] for attr in attrs]
+					if None in attr_descs:
+						attr_descs[:] = [f"${res.attributes.value:02X}"]
 					
 					parts = [str(res.resource_id)]
 					
@@ -279,24 +298,24 @@ def main():
 						name = _bytes_escape(res.name, quote='"')
 						parts.append(f'"{name}"')
 					
-					parts += attrs
+					parts += attr_descs
 					
 					restype = _bytes_escape(res.resource_type, quote="'")
-					print(f"data '{restype}' ({', '.join(parts)}) {{")
+					print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
 					
-					for i in range(0, len(res.data), 16):
+					for i in range(0, len(data), 16):
 						# Two-byte grouping is really annoying to implement.
 						groups = []
 						for j in range(0, 16, 2):
-							if i+j >= len(res.data):
+							if i+j >= len(data):
 								break
-							elif i+j+1 >= len(res.data):
-								groups.append(f"{res.data[i+j]:02X}")
+							elif i+j+1 >= len(data):
+								groups.append(f"{data[i+j]:02X}")
 							else:
-								groups.append(f"{res.data[i+j]:02X}{res.data[i+j+1]:02X}")
+								groups.append(f"{data[i+j]:02X}{data[i+j+1]:02X}")
 						
 						s = f'$"{" ".join(groups)}"'
-						comment = "/* " + res.data[i:i + 16].decode("MacRoman").translate(_TRANSLATE_NONPRINTABLES) + " */"
+						comment = "/* " + data[i:i + 16].decode("MacRoman").translate(_TRANSLATE_NONPRINTABLES) + " */"
 						print(f"\t{s:<54s}{comment}")
 					
 					print("};")
@@ -340,7 +359,17 @@ def main():
 						else:
 							attrdesc = "no attributes"
 						
-						print(f"({resid}), {name}, {attrdesc}, {len(res.data)} bytes")
+						if ns.decompress and api.ResourceAttrs.resCompressed in attrs:
+							try:
+								res.data
+							except compress.DecompressError:
+								length_desc = f"decompression failed ({len(res.data_raw)} bytes compressed)"
+							else:
+								length_desc = f"{len(res.data)} bytes ({len(res.data_raw)} bytes compressed)"
+						else:
+							length_desc = f"{len(res.data_raw)} bytes"
+						
+						print(f"({resid}), {name}, {attrdesc}, {length_desc}")
 					print()
 			else:
 				print("No resource types (empty resource file)")

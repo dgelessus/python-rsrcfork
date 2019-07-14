@@ -121,7 +121,11 @@ Changelog
 Version 1.2.0 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Added support for compressed resources.
+	* Compressed resource data is automatically decompressed, both in the Python API and on the command like.
+	* This is technically a breaking change, since in previous versions the compressed resource data was returned directly. However, this change will not affect end users negatively, unless one has already implemented custom handling for compressed resources.
+	* Currently, only one of the two standard Mac OS resource compression format is supported. Attempting to access a resource compressed in an unsupported format results in a ``DecompressError``.
+	* To access the raw resource data as stored in the file, without automatic decompression, use the ``res.data_raw`` attribute (for the Python API), or the ``--no-decompress`` option (for the command-line interface). This can be used to read the resource data in its compressed form, even if the compression format is not supported.
 
 Version 1.1.3.post1
 ^^^^^^^^^^^^^^^^^^^
