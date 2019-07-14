@@ -118,6 +118,11 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
+Version 1.2.0 (next version)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* (no changes yet)
+
 Version 1.1.3.post1
 ^^^^^^^^^^^^^^^^^^^
 
