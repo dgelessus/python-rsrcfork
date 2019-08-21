@@ -163,23 +163,11 @@ def _read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[in
 		return int.from_bytes(data[position:position+1], "big", signed=True), 1
 
 
-def _decompress_application(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
-	working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_APPLICATION_HEADER.unpack_from(data)
-	
-	if debug:
-		print(f"Working buffer fractional size: {working_buffer_fractional_size} (=> {len(data) * 256 / working_buffer_fractional_size})")
-		print(f"Expansion buffer size: {expansion_buffer_size}")
-	
-	if dcmp_id != 0:
-		raise DecompressError(f"Unsupported 'dcmp' ID: {dcmp_id}, expected 0")
-	
-	if reserved != 0:
-		raise DecompressError(f"Reserved field should be 0, not 0x{reserved:>04x}")
-	
+def _decompress_application_0(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
 	prev_literals = []
 	decompressed = b""
 	
-	i = STRUCT_COMPRESSED_APPLICATION_HEADER.size
+	i = 0
 	
 	while i < len(data):
 		byte = data[i]
@@ -430,6 +418,30 @@ def _decompress_application(data: bytes, decompressed_length: int, *, debug: boo
 		decompressed = decompressed[:-1]
 	
 	return decompressed
+
+
+def _decompress_application_1(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+	raise NotImplementedError("'dcmp' (1) decompression not supported yet")
+
+
+def _decompress_application(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+	working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_APPLICATION_HEADER.unpack_from(data)
+	
+	if debug:
+		print(f"Working buffer fractional size: {working_buffer_fractional_size} (=> {len(data) * 256 / working_buffer_fractional_size})")
+		print(f"Expansion buffer size: {expansion_buffer_size}")
+	
+	if dcmp_id == 0:
+		decompress_func = _decompress_application_0
+	elif dcmp_id == 1:
+		decompress_func = _decompress_application_1
+	else:
+		raise DecompressError(f"Unsupported 'dcmp' ID: {dcmp_id}, expected 0 or 1")
+	
+	if reserved != 0:
+		raise DecompressError(f"Reserved field should be 0, not 0x{reserved:>04x}")
+	
+	return decompress_func(data[STRUCT_COMPRESSED_APPLICATION_HEADER.size:], decompressed_length, debug=debug)
 
 
 def _decompress_system_untagged(data: bytes, decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> bytes:
