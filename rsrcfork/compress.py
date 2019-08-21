@@ -18,15 +18,15 @@ COMPRESSED_TYPE_SYSTEM = 0x0901
 # 4 bytes: Signature (see above).
 # 2 bytes: Length of the complete header (this common part and the type-specific part that follows it). (This meaning is just a guess - the field's value is always 0x0012, so there's no way to know for certain what it means.)
 # 2 bytes: Compression type. Known so far: 0x0901 is used in the System file's resources. 0x0801 is used in other files' resources.
-STRUCT_COMPRESSED_HEADER = struct.Struct(">4sHH")
+# 4 bytes: Length of the data after decompression.
+STRUCT_COMPRESSED_HEADER = struct.Struct(">4sHHI")
 
 # Header continuation part for an "application" compressed resource.
-# 4 bytes: Length of the data after decompression.
 # 1 byte: "Working buffer fractional size" - the ratio of the compressed data size to the uncompressed data size, times 256.
 # 1 byte: "Expansion buffer size" - the maximum number of bytes that the data might grow during decompression.
 # 2 bytes: The ID of the 'dcmp' resource that can decompress this resource. Currently only ID 0 is supported.
 # 2 bytes: Reserved (always zero).
-STRUCT_COMPRESSED_APPLICATION_HEADER = struct.Struct(">IBBhH")
+STRUCT_COMPRESSED_APPLICATION_HEADER = struct.Struct(">BBhH")
 
 # Lookup table for codes in range(0x4b, 0xfe) in "application" compressed resources.
 # This table was obtained by decompressing a manually created compressed resource that refers to every possible table entry. Detailed steps:
@@ -69,12 +69,11 @@ COMPRESSED_APPLICATION_TABLE = [COMPRESSED_APPLICATION_TABLE_DATA[i:i + 2] for i
 assert len(COMPRESSED_APPLICATION_TABLE) == len(range(0x4b, 0xfe))
 
 # Header continuation part for a "system" compressed resource.
-# 4 bytes: Length of the data after decompression.
 # 2 bytes: The ID of the 'dcmp' resource that can decompress this resource. Currently only ID 2 is supported.
 # 2 bytes: Unknown meaning, doesn't appear to have any effect on the decompression algorithm. Usually zero, sometimes set to a small integer (< 10). On 'lpch' resources, the value is always nonzero, and sometimes larger than usual.
 # 1 byte: Number of entries in the custom lookup table minus one. Set to zero if the default lookup table is used.
 # 1 byte: Flags. See the CompressedSystemFlags enum below for details.
-STRUCT_COMPRESSED_SYSTEM_HEADER = struct.Struct(">IhHBB")
+STRUCT_COMPRESSED_SYSTEM_HEADER = struct.Struct(">hHBB")
 
 # Default lookup table for "system" compressed resources.
 # If the custom table flag is set, a custom table (usually with fewer than 256 entries) is used instead of this one.
@@ -164,11 +163,10 @@ def _read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[in
 		return int.from_bytes(data[position:position+1], "big", signed=True), 1
 
 
-def _decompress_application(data: bytes, *, debug: bool=False) -> bytes:
-	decompressed_length, working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_APPLICATION_HEADER.unpack_from(data)
+def _decompress_application(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+	working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_APPLICATION_HEADER.unpack_from(data)
 	
 	if debug:
-		print(f"Decompressed length: {decompressed_length}")
 		print(f"Working buffer fractional size: {working_buffer_fractional_size} (=> {len(data) * 256 / working_buffer_fractional_size})")
 		print(f"Expansion buffer size: {expansion_buffer_size}")
 	
@@ -431,9 +429,6 @@ def _decompress_application(data: bytes, *, debug: bool=False) -> bytes:
 		# This is necessary because nearly all codes generate data in groups of 2 or 4 bytes, so it is basically impossible to represent data with an odd length using this compression format.
 		decompressed = decompressed[:-1]
 	
-	if len(decompressed) != decompressed_length:
-		raise DecompressError(f"Actual length of decompressed data ({len(decompressed)}) does not match length stored in resource ({decompressed_length})")
-	
 	return decompressed
 
 
@@ -494,8 +489,8 @@ def _decompress_system_tagged(data: bytes, decompressed_length: int, table: typi
 	
 	return b"".join(parts)
 
-def _decompress_system(data: bytes, *, debug: bool=False) -> bytes:
-	decompressed_length, dcmp_id, unknown, table_count_m1, flags_raw = STRUCT_COMPRESSED_SYSTEM_HEADER.unpack_from(data)
+def _decompress_system(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+	dcmp_id, unknown, table_count_m1, flags_raw = STRUCT_COMPRESSED_SYSTEM_HEADER.unpack_from(data)
 	if dcmp_id != 2:
 		raise DecompressError(f"Unsupported 'dcmp' ID: {dcmp_id}, expected 2")
 	if debug:
@@ -534,17 +529,14 @@ def _decompress_system(data: bytes, *, debug: bool=False) -> bytes:
 	else:
 		decompress_func = _decompress_system_untagged
 	
-	decompressed = decompress_func(data[data_start:], decompressed_length, table, debug=debug)
-	if len(decompressed) != decompressed_length:
-		raise DecompressError(f"Actual length of decompressed data ({len(decompressed)}) does not match length stored in resource ({decompressed_length})")
-	return decompressed
+	return decompress_func(data[data_start:], decompressed_length, table, debug=debug)
 
 
 def decompress(data: bytes, *, debug: bool=False) -> bytes:
 	"""Decompress the given compressed resource data."""
 	
 	try:
-		signature, header_length, compression_type = STRUCT_COMPRESSED_HEADER.unpack_from(data)
+		signature, header_length, compression_type, decompressed_length = STRUCT_COMPRESSED_HEADER.unpack_from(data)
 	except struct.error:
 		raise DecompressError(f"Invalid header")
 	if signature != COMPRESSED_SIGNATURE:
@@ -559,4 +551,10 @@ def decompress(data: bytes, *, debug: bool=False) -> bytes:
 	else:
 		raise DecompressError(f"Unsupported compression type: 0x{compression_type:>04x}")
 	
-	return decompress_func(data[STRUCT_COMPRESSED_HEADER.size:], debug=debug)
+	if debug:
+		print(f"Decompressed length: {decompressed_length}")
+	
+	decompressed = decompress_func(data[STRUCT_COMPRESSED_HEADER.size:], decompressed_length, debug=debug)
+	if len(decompressed) != decompressed_length:
+		raise DecompressError(f"Actual length of decompressed data ({len(decompressed)}) does not match length stored in resource ({decompressed_length})")
+	return decompressed
