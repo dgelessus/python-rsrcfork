@@ -107,7 +107,7 @@ def decompress(data: bytes, decompressed_length: int, *, debug: bool=False) -> b
 			decompressed += literal
 		elif byte in range(0x4b, 0xfe):
 			# Reference into a fixed table of two-byte literals.
-			# All compressed resource use the same table.
+			# All compressed resources use the same table.
 			table_index = byte - 0x4b
 			i += 1
 			if debug:
