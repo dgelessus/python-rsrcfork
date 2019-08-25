@@ -140,6 +140,9 @@ Version 1.2.0 (next version)
   * Currently, only the three standard System 7.0 compression formats (``'dcmp'`` IDs 0, 1, 2) are supported. Attempting to access a resource compressed in an unsupported format results in a ``DecompressError``.
   * To access the raw resource data as stored in the file, without automatic decompression, use the ``res.data_raw`` attribute (for the Python API), or the ``--no-decompress`` option (for the command-line interface). This can be used to read the resource data in its compressed form, even if the compression format is not supported.
 
+* Fixed reading from non-seekable streams not working for some resource files.
+* Removed the ``allow_seek`` parameter of ``ResourceFork.__init__`` and the ``--read-mode`` command line option. They are no longer necessary, and were already practically useless before due to non-seekable stream reading being broken.
+
 Version 1.1.3.post1
 ^^^^^^^^^^^^^^^^^^^
 

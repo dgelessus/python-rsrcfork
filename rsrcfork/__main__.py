@@ -190,7 +190,6 @@ def main():
 	ap.add_argument("--format", choices=["dump", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
 	ap.add_argument("--header-system", action="store_true", help="Output system-reserved header data and nothing else")
 	ap.add_argument("--header-application", action="store_true", help="Output application-specific header data and nothing else")
-	ap.add_argument("--read-mode", choices=["auto", "stream", "seek"], default="auto", help="Whether to read the data sequentially (stream) or on-demand (seek), or auto to use seeking when possible (default: %(default)s)")
 	
 	ap.add_argument("file", help="The file to read, or - for stdin")
 	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to display, or omit to show an overview of all resources")
@@ -198,16 +197,15 @@ def main():
 	ns = ap.parse_args()
 	
 	ns.fork = {"auto": None, "data": False, "rsrc": True}[ns.fork]
-	ns.read_mode = {"auto": None, "stream": False, "seek": True}[ns.read_mode]
 	
 	if ns.file == "-":
 		if ns.fork is not None:
 			print("Cannot specify an explicit fork when reading from stdin", file=sys.stderr)
 			sys.exit(1)
 		
-		rf = api.ResourceFile(sys.stdin.buffer, allow_seek=ns.read_mode)
+		rf = api.ResourceFile(sys.stdin.buffer)
 	else:
-		rf = api.ResourceFile.open(ns.file, rsrcfork=ns.fork, allow_seek=ns.read_mode)
+		rf = api.ResourceFile.open(ns.file, rsrcfork=ns.fork)
 	
 	with rf:
 		if ns.header_system or ns.header_application:

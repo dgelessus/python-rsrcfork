@@ -1,6 +1,7 @@
 import collections
 import collections.abc
 import enum
+import io
 import os
 import struct
 import typing
@@ -177,19 +178,14 @@ class ResourceFile(collections.abc.Mapping):
 			
 			if name_offset == 0xffff:
 				name = None
-			elif self._resfile._allow_seek:
+			else:
 				self._resfile._stream.seek(self._resfile.map_offset + self._resfile.map_name_list_offset + name_offset)
 				(name_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_NAME_HEADER)
-				name = self._resfile._read(name_length)
-			else:
-				name = self._resfile._resource_names[name_offset]
+				name = self._resfile._stream.read(name_length)
 			
-			if self._resfile._allow_seek:
-				self._resfile._stream.seek(self._resfile.data_offset + data_offset)
-				(data_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
-				data = self._resfile._read(data_length)
-			else:
-				data = self._resfile._resource_data[data_offset]
+			self._resfile._stream.seek(self._resfile.data_offset + data_offset)
+			(data_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
+			data = self._resfile._stream.read(data_length)
 			
 			return Resource(self._restype, key, name, attributes, data)
 		
@@ -239,14 +235,14 @@ class ResourceFile(collections.abc.Mapping):
 		# Use the selected fork to build a ResourceFile.
 		return cls(f, close=True, **kwargs)
 	
-	def __init__(self, stream: typing.io.BinaryIO, *, allow_seek: typing.Optional[bool]=None, close: bool=False):
+	def __init__(self, stream: typing.io.BinaryIO, *, close: bool=False):
 		"""Create a ResourceFile wrapping the given byte stream.
 		
 		To read resource file data from a bytes object, wrap it in an io.BytesIO.
 		
-		allow_seek controls whether seeking should be used when reading the file. If allow_seek is None, stream.seekable() is called to determine whether seeking should be used.
-		If seeking is used, only the file header, map header, resource types, and resource references are read into memory. Resource data and names are loaded on-demand when the respective resource is accessed.
-		If seeking is not used, the entire stream is processed sequentially and read into memory, including all resource data and names. This may be necessary when the stream does not support seeking at all. Memory is usually not a concern, most resource files are not even a megabyte in size.
+		If the stream is seekable, only the file header and resource map are read initially. Resource data and names are loaded on-demand when the respective resource is accessed. If the stream is not seekable, the entire stream data is read into memory (this is necessary because the resource map is stored at the end of the resource file).
+		
+		In practice, memory usage is usually not a concern when reading resource files. Even large resource files are only a few megabytes in size, and due to limitations in the format, resource files cannot be much larger than 16 MiB (except for special cases that are unlikely to occur in practice).
 		
 		close controls whether the stream should be closed when the ResourceFile's close method is called. By default this is False.
 		"""
@@ -254,50 +250,31 @@ class ResourceFile(collections.abc.Mapping):
 		super().__init__()
 		
 		self._close_stream: bool = close
-		self._stream: typing.io.BinaryIO = stream
+		self._stream: typing.io.BinaryIO
+		if stream.seekable():
+			self._stream = stream
+		else:
+			self._stream = io.BytesIO(stream.read())
 		
 		try:
-			self._allow_seek: bool
-			if allow_seek is None:
-				self._allow_seek = self._stream.seekable()
-			else:
-				self._allow_seek = allow_seek
-			
-			if self._allow_seek:
-				self._pos = None
-				self._init_seeking()
-			else:
-				self._pos: int = 0
-				self._init_streaming()
+			self._read_header()
+			self._stream.seek(self.map_offset)
+			self._read_map_header()
+			self._read_all_resource_types()
+			self._read_all_references()
 		except BaseException:
 			self.close()
 			raise
 	
-	def _tell(self) -> int:
-		"""Get the current position in the stream. This uses the stream's tell method if seeking is enabled, and an internal counter otherwise."""
-		
-		if self._allow_seek:
-			return self._stream.tell()
-		else:
-			return self._pos
-	
-	def _read(self, count: int) -> bytes:
-		"""Read count bytes from the stream. If seeking is disabled, this also increments the internal seek counter accordingly."""
-		
-		ret = self._stream.read(count)
-		if not self._allow_seek:
-			self._pos += len(ret)
-		return ret
-	
 	def _stream_unpack(self, st: struct.Struct) -> typing.Tuple:
 		"""Unpack data from the stream according to the struct st. The number of bytes to read is determined using st.size, so variable-sized structs cannot be used with this method."""
 		
-		return st.unpack(self._read(st.size))
+		return st.unpack(self._stream.read(st.size))
 	
 	def _read_header(self):
 		"""Read the resource file header, starting at the current stream position."""
 		
-		assert self._tell() == 0
+		assert self._stream.tell() == 0
 		
 		self.data_offset: int
 		self.map_offset: int
@@ -314,27 +291,12 @@ class ResourceFile(collections.abc.Mapping):
 			self.header_application_data,
 		) = self._stream_unpack(STRUCT_RESOURCE_HEADER)
 		
-		assert self._tell() == self.data_offset
-	
-	def _read_all_resource_data(self):
-		"""Read all resource data blocks, starting at the current stream position, until self.map_offset is reached."""
-		
-		assert self._tell() == self.data_offset
-		
-		self._resource_data: typing.MutableMapping[int, bytes] = collections.OrderedDict()
-		
-		while self._tell() < self.map_offset:
-			initial_pos = self._tell()
-			(length,) = self._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
-			assert self._tell() + length <= self.map_offset
-			self._resource_data[initial_pos] = self._read(length)
-		
-		assert self._tell() == self.map_offset
+		assert self._stream.tell() == self.data_offset
 	
 	def _read_map_header(self):
 		"""Read the map header, starting at the current stream position."""
 		
-		assert self._tell() == self.map_offset
+		assert self._stream.tell() == self.map_offset
 		
 		self.map_type_list_offset: int
 		self.map_name_list_offset: int
@@ -382,44 +344,6 @@ class ResourceFile(collections.abc.Mapping):
 				data_offset = attributes_and_data_offset & ((1 << 24) - 1)
 				
 				resmap[resource_id] = (name_offset, ResourceAttrs(attributes), data_offset)
-	
-	def _read_all_resource_names(self):
-		"""Read all resource names, starting at the current stream position, until the end of the map is reached."""
-		
-		self._resource_names: typing.MutableMapping[int, bytes] = collections.OrderedDict()
-		
-		while self._tell() < self.map_offset + self.map_length:
-			initial_pos = self._tell()
-			(length,) = self._stream_unpack(STRUCT_RESOURCE_NAME_HEADER)
-			self._resource_names[initial_pos] = self._read(length)
-	
-	def _init_seeking(self):
-		"""Initialize self with seeking enabled, by reading the header, map header, resource types, and references."""
-		
-		self._read_header()
-		self._stream.seek(self.map_offset)
-		self._read_map_header()
-		self._read_all_resource_types()
-		self._read_all_references()
-	
-	def _init_streaming(self):
-		"""Initialize self with seeking disabled, by reading the entire file sequentially."""
-		
-		self._read_header()
-		self._read_all_resource_data()
-		
-		assert self._tell() == self.map_offset
-		
-		self._read_map_header()
-		
-		assert self._tell() == self.map_offset + self.map_type_list_offset
-		
-		self._read_all_resource_types()
-		self._read_all_references()
-		
-		assert self._tell() == self.map_offset + self.map_name_list_offset
-		
-		self._read_all_resource_names()
 	
 	def close(self):
 		"""Close this ResourceFile.
