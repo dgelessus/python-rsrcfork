@@ -1,7 +1,23 @@
 ``rsrcfork``
 ============
 
-A pure Python library for reading Macintosh Toolbox or Carbon resource manager data, as found in resource forks or ``.rsrc`` files even on current Mac OS X/macOS systems.
+A pure Python, cross-platform library/tool for reading Macintosh resource data, as stored in resource forks and ``.rsrc`` files.
+
+Resource forks were an important part of the Classic Mac OS, where they provided a standard way to store structured file data, metadata and application resources. This usage continued into Mac OS X (now called macOS) for backward compatibility, but over time resource forks became less commonly used in favor of simple data fork-only formats, application bundles, and extended attributes.
+
+As of OS X 10.8 and the deprecation of the Carbon API, macOS no longer provides any officially supported APIs for using and manipulating resource data. Despite this, parts of macOS still support and use resource forks, for example to store custom file and folder icons set by the user.
+
+Features
+--------
+
+* Pure Python, cross-platform - no native Mac APIs are used.
+* Provides both a Python API and a command-line tool.
+* Resource data can be read from either the resource fork or the data fork.
+	* On Mac systems, the correct fork is selected automatically when reading a file. This allows reading both regular resource forks and resource data stored in data forks (as with ``.rsrc`` and similar files).
+	* On non-Mac systems, resource forks are not available, so the data fork is always used.
+* Compressed resources (supported by System 7 through Mac OS 9) are automatically decompressed.
+	* Only the standard System 7.0 resource compression methods are supported. Resources that use non-standard decompressors cannot be decompressed.
+* Object ``repr``\s are REPL-friendly: all relevant information is displayed, and long data is truncated to avoid filling up the screen by accident.
 
 Requirements
 ------------
@@ -11,27 +27,17 @@ Python 3.6 or later. No other libraries are required.
 Installation
 ------------
 
-``rsrcfork`` is available `on PyPI`__ and can be installed using ``pip``: 
+``rsrcfork`` is available `on PyPI <https://pypi.org/project/rsrcfork/>`_ and can be installed using ``pip``: 
 
 .. code-block:: sh
 
 	python3 -m pip install rsrcfork
 
-Alternatively you can run the ``setup.py`` script manually:
+Alternatively you can download the source code manually, and run this command in the source code directory to install it:
 
 .. code-block:: sh
 
-	python3 setup.py install
-
-__ https://pypi.python.org/pypi/rsrcfork
-
-Features
---------
-
-* Reading resources from data or resource forks (the latter only work on macOS of course)
-* Reading data lazily with seeking, or sequentially without seeking
-* Accessing resource data and attributes by their type code and ID, using a mapping-like interface
-* REPL-friendly ``repr``\s that truncate long resource data so it doesn't fill the entire screen
+	python3 -m pip install .
 
 Examples
 --------
