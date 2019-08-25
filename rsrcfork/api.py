@@ -57,6 +57,9 @@ STRUCT_RESOURCE_REFERENCE = struct.Struct(">hHI4x")
 # 1 byte: Length of following resource name.
 STRUCT_RESOURCE_NAME_HEADER = struct.Struct(">B")
 
+class InvalidResourceFileError(Exception):
+	pass
+
 class ResourceFileAttrs(enum.Flag):
 	"""Resource file attribute flags. The descriptions for these flags are taken from comments on the map*Bit and map* enum constants in <CarbonCore/Resources.h>."""
 	
@@ -181,11 +184,11 @@ class ResourceFile(collections.abc.Mapping):
 			else:
 				self._resfile._stream.seek(self._resfile.map_offset + self._resfile.map_name_list_offset + name_offset)
 				(name_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_NAME_HEADER)
-				name = self._resfile._stream.read(name_length)
+				name = self._resfile._read_exact(name_length)
 			
 			self._resfile._stream.seek(self._resfile.data_offset + data_offset)
 			(data_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
-			data = self._resfile._stream.read(data_length)
+			data = self._resfile._read_exact(data_length)
 			
 			return Resource(self._restype, key, name, attributes, data)
 		
@@ -266,10 +269,21 @@ class ResourceFile(collections.abc.Mapping):
 			self.close()
 			raise
 	
+	def _read_exact(self, byte_count: int) -> bytes:
+		"""Read byte_count bytes from the stream and raise an exception if too few bytes are read (i. e. if EOF was hit prematurely)."""
+		
+		data = self._stream.read(byte_count)
+		if len(data) != byte_count:
+			raise InvalidResourceFileError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
+		return data
+	
 	def _stream_unpack(self, st: struct.Struct) -> typing.Tuple:
 		"""Unpack data from the stream according to the struct st. The number of bytes to read is determined using st.size, so variable-sized structs cannot be used with this method."""
 		
-		return st.unpack(self._stream.read(st.size))
+		try:
+			return st.unpack(self._read_exact(st.size))
+		except struct.error as e:
+			raise InvalidResourceFileError(str(e))
 	
 	def _read_header(self):
 		"""Read the resource file header, starting at the current stream position."""
@@ -291,7 +305,8 @@ class ResourceFile(collections.abc.Mapping):
 			self.header_application_data,
 		) = self._stream_unpack(STRUCT_RESOURCE_HEADER)
 		
-		assert self._stream.tell() == self.data_offset
+		if self._stream.tell() != self.data_offset:
+			raise InvalidResourceFileError(f"The data offset ({self.data_offset}) should point exactly to the end of the file header ({self._stream.tell()})")
 	
 	def _read_map_header(self):
 		"""Read the map header, starting at the current stream position."""
