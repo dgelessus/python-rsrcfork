@@ -13,10 +13,14 @@ Features
 * Pure Python, cross-platform - no native Mac APIs are used.
 * Provides both a Python API and a command-line tool.
 * Resource data can be read from either the resource fork or the data fork.
-	* On Mac systems, the correct fork is selected automatically when reading a file. This allows reading both regular resource forks and resource data stored in data forks (as with ``.rsrc`` and similar files).
-	* On non-Mac systems, resource forks are not available, so the data fork is always used.
+
+  * On Mac systems, the correct fork is selected automatically when reading a file. This allows reading both regular resource forks and resource data stored in data forks (as with ``.rsrc`` and similar files).
+  * On non-Mac systems, resource forks are not available, so the data fork is always used.
+
 * Compressed resources (supported by System 7 through Mac OS 9) are automatically decompressed.
-	* Only the standard System 7.0 resource compression methods are supported. Resources that use non-standard decompressors cannot be decompressed.
+
+  * Only the standard System 7.0 resource compression methods are supported. Resources that use non-standard decompressors cannot be decompressed.
+
 * Object ``repr``\s are REPL-friendly: all relevant information is displayed, and long data is truncated to avoid filling up the screen by accident.
 
 Requirements
@@ -31,13 +35,13 @@ Installation
 
 .. code-block:: sh
 
-	python3 -m pip install rsrcfork
+    python3 -m pip install rsrcfork
 
 Alternatively you can download the source code manually, and run this command in the source code directory to install it:
 
 .. code-block:: sh
 
-	python3 -m pip install .
+    python3 -m pip install .
 
 Examples
 --------
@@ -47,54 +51,53 @@ Simple example
 
 .. code-block:: python
 
-	>>> import rsrcfork
-	>>> rf = rsrcfork.open("/Users/Shared/Test.textClipping")
-	>>> rf
-	<rsrcfork.ResourceFile at 0x1046e6048, attributes ResourceFileAttrs.0, containing 4 resource types: [b'utxt', b'utf8', b'TEXT', b'drag']>
-	>>> rf[b"TEXT"]
-	<rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(resource_type=b'TEXT', resource_id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
+    >>> import rsrcfork
+    >>> rf = rsrcfork.open("/Users/Shared/Test.textClipping")
+    >>> rf
+    <rsrcfork.ResourceFile at 0x1046e6048, attributes ResourceFileAttrs.0, containing 4 resource types: [b'utxt', b'utf8', b'TEXT', b'drag']>
+    >>> rf[b"TEXT"]
+    <rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(resource_type=b'TEXT', resource_id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
 
 Automatic selection of data/resource fork
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
-	>>> import rsrcfork
-	>>> datarf = rsrcfork.open("/System/Library/Fonts/Monaco.dfont") # Resources in data fork
-	>>> datarf._stream
-	<_io.BufferedReader name='/System/Library/Fonts/Monaco.dfont'>
-	>>> resourcerf = rsrcfork.open("/Users/Shared/Test.textClipping") # Resources in resource fork
-	>>> resourcerf._stream
-	<_io.BufferedReader name='/Users/Shared/Test.textClipping/..namedfork/rsrc'>
+    >>> import rsrcfork
+    >>> datarf = rsrcfork.open("/System/Library/Fonts/Monaco.dfont") # Resources in data fork
+    >>> datarf._stream
+    <_io.BufferedReader name='/System/Library/Fonts/Monaco.dfont'>
+    >>> resourcerf = rsrcfork.open("/Users/Shared/Test.textClipping") # Resources in resource fork
+    >>> resourcerf._stream
+    <_io.BufferedReader name='/Users/Shared/Test.textClipping/..namedfork/rsrc'>
 
 Command-line interface
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: sh
 
-	$ python3 -m rsrcfork /Users/Shared/Test.textClipping
-	No header system data
-	No header application data
-	No file attributes
-	4 resource types:
-	'utxt': 1 resources:
-	(256), unnamed, no attributes, 34 bytes
-	
-	'utf8': 1 resources:
-	(256), unnamed, no attributes, 17 bytes
-	
-	'TEXT': 1 resources:
-	(256), unnamed, no attributes, 17 bytes
-	
-	'drag': 1 resources:
-	(128), unnamed, no attributes, 64 bytes
-	
-	$ python3 -m rsrcfork /Users/Shared/Test.textClipping "'TEXT' (256)"
-	Resource 'TEXT' (256), unnamed, no attributes, 17 bytes:
-	00000000 48 65 72 65 20 69 73 20 73 6f 6d 65 20 74 65 78 |Here is some tex|
-	00000010 74                                              |t|
-	00000011
-	
+    $ python3 -m rsrcfork /Users/Shared/Test.textClipping
+    No header system data
+    No header application data
+    No file attributes
+    4 resource types:
+    'utxt': 1 resources:
+    (256), unnamed, no attributes, 34 bytes
+    
+    'utf8': 1 resources:
+    (256), unnamed, no attributes, 17 bytes
+    
+    'TEXT': 1 resources:
+    (256), unnamed, no attributes, 17 bytes
+    
+    'drag': 1 resources:
+    (128), unnamed, no attributes, 64 bytes
+    
+    $ python3 -m rsrcfork /Users/Shared/Test.textClipping "'TEXT' (256)"
+    Resource 'TEXT' (256), unnamed, no attributes, 17 bytes:
+    00000000 48 65 72 65 20 69 73 20 73 6f 6d 65 20 74 65 78 |Here is some tex|
+    00000010 74                                              |t|
+    00000011
 
 Limitations
 -----------
@@ -111,8 +114,10 @@ Further info on resource files
 Sources of information about the resource fork data format, and the structure of common resource types:
 
 * Inside Macintosh, Volume I, Chapter 5 "The Resource Manager". This book can probably be obtained in physical form somewhere, but the relevant chapter/book is also available in a few places online:
-	- `Apple's legacy documentation <https://developer.apple.com/legacy/library/documentation/mac/pdf/MoreMacintoshToolbox.pdf>`_
-	- pagetable.com, a site that happened to have a copy of the book: `info blog post <http://www.pagetable.com/?p=50>`_, `direct download <http://www.weihenstephan.org/~michaste/pagetable/mac/Inside_Macintosh.pdf>`_
+
+  * `Apple's legacy documentation <https://developer.apple.com/legacy/library/documentation/mac/pdf/MoreMacintoshToolbox.pdf>`_
+  * pagetable.com, a site that happened to have a copy of the book: `info blog post <http://www.pagetable.com/?p=50>`_, `direct download <http://www.weihenstephan.org/~michaste/pagetable/mac/Inside_Macintosh.pdf>`_
+
 * `Wikipedia <https://en.wikipedia.org/wiki/Resource_fork>`_, of course
 * The `Resource Fork <http://fileformats.archiveteam.org/wiki/Resource_Fork>`_ article on "Just Solve the File Format Problem" (despite the title, this is a decent site and not clickbait)
 * The `KSFL <https://github.com/kreativekorp/ksfl>`_ library (and `its wiki <https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format>`_), written in Java, which supports reading and writing resource files
@@ -129,10 +134,11 @@ Version 1.2.0 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Added support for compressed resources.
-	* Compressed resource data is automatically decompressed, both in the Python API and on the command line.
-	* This is technically a breaking change, since in previous versions the compressed resource data was returned directly. However, this change will not affect end users negatively, unless one has already implemented custom handling for compressed resources.
-	* Currently, only the three standard System 7.0 compression formats (``'dcmp'`` IDs 0, 1, 2) are supported. Attempting to access a resource compressed in an unsupported format results in a ``DecompressError``.
-	* To access the raw resource data as stored in the file, without automatic decompression, use the ``res.data_raw`` attribute (for the Python API), or the ``--no-decompress`` option (for the command-line interface). This can be used to read the resource data in its compressed form, even if the compression format is not supported.
+
+  * Compressed resource data is automatically decompressed, both in the Python API and on the command line.
+  * This is technically a breaking change, since in previous versions the compressed resource data was returned directly. However, this change will not affect end users negatively, unless one has already implemented custom handling for compressed resources.
+  * Currently, only the three standard System 7.0 compression formats (``'dcmp'`` IDs 0, 1, 2) are supported. Attempting to access a resource compressed in an unsupported format results in a ``DecompressError``.
+  * To access the raw resource data as stored in the file, without automatic decompression, use the ``res.data_raw`` attribute (for the Python API), or the ``--no-decompress`` option (for the command-line interface). This can be used to read the resource data in its compressed form, even if the compression format is not supported.
 
 Version 1.1.3.post1
 ^^^^^^^^^^^^^^^^^^^
