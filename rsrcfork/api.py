@@ -203,10 +203,14 @@ class ResourceFile(collections.abc.Mapping):
 		"""Open the file at the given path as a ResourceFile.
 		
 		If rsrcfork is not None, it is treated as boolean and controls whether the data or resource fork of the file should be opened. (On systems other than macOS, opening resource forks will not work of course, since they don't exist.)
-		If rsrcfork is None, guess whether the data or resource fork should be opened. If the resource fork exists and is not empty, it is opened, otherwise the data fork is opened instead.
+		If rsrcfork is None, the resource fork is opened if it exists and contains valid resource data, otherwise the data fork is opened instead.
 		"""
 		
-		f: typing.io.BinaryIO
+		if "close" in kwargs:
+			raise TypeError("ResourceFile.open does not support the 'close' keyword argument")
+		
+		kwargs["close"] = True
+		
 		if rsrcfork is None:
 			# Determine whether the file has a usable resource fork.
 			try:
@@ -214,29 +218,25 @@ class ResourceFile(collections.abc.Mapping):
 				f = open(os.path.join(filename, "..namedfork", "rsrc"), "rb")
 			except (FileNotFoundError, NotADirectoryError):
 				# If the resource fork doesn't exist, fall back to the data fork.
-				f = open(filename, "rb")
+				return cls(open(filename, "rb"), **kwargs)
 			else:
+				# Resource fork exists, check if it actually contains valid resource data.
+				# This check is necessary because opening ..namedfork/rsrc on files that don't actually have a resource fork can sometimes succeed, but the resulting stream will either be empty, or (as of macOS 10.14, and possibly earlier) contain garbage data.
 				try:
-					# Resource fork exists, check if it actually contains anything.
-					if f.read(1):
-						# Resource fork contains data, seek back to start before using it.
-						f.seek(0)
-					else:
-						# Resource fork contains no data, fall back to the data fork.
-						f.close()
-						f = open(filename, "rb")
+					return cls(f, **kwargs)
+				except InvalidResourceFileError:
+					# Resource fork is empty or invalid, fall back to the data fork.
+					f.close()
+					return cls(open(filename, "rb"), **kwargs)
 				except BaseException:
 					f.close()
 					raise
 		elif rsrcfork:
 			# Force use of the resource fork.
-			f = open(os.path.join(filename, "..namedfork", "rsrc"), "rb")
+			return cls(open(os.path.join(filename, "..namedfork", "rsrc"), "rb"), **kwargs)
 		else:
 			# Force use of the data fork.
-			f = open(filename, "rb")
-		
-		# Use the selected fork to build a ResourceFile.
-		return cls(f, close=True, **kwargs)
+			return cls(open(filename, "rb"), **kwargs)
 	
 	def __init__(self, stream: typing.io.BinaryIO, *, close: bool=False):
 		"""Create a ResourceFile wrapping the given byte stream.
