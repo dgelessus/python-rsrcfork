@@ -5,6 +5,7 @@ import io
 import os
 import struct
 import typing
+import warnings
 
 from . import compress
 
@@ -199,11 +200,16 @@ class ResourceFile(collections.abc.Mapping):
 				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing {len(self)} resources with IDs: {list(self)}>"
 	
 	@classmethod
-	def open(cls, filename: typing.Union[str, bytes, os.PathLike], *, rsrcfork: typing.Optional[bool]=None, **kwargs) -> "ResourceFile":
+	def open(cls, filename: typing.Union[str, bytes, os.PathLike], *, fork: str="auto", **kwargs) -> "ResourceFile":
 		"""Open the file at the given path as a ResourceFile.
 		
-		If rsrcfork is not None, it is treated as boolean and controls whether the data or resource fork of the file should be opened. (On systems other than macOS, opening resource forks will not work of course, since they don't exist.)
-		If rsrcfork is None, the resource fork is opened if it exists and contains valid resource data, otherwise the data fork is opened instead.
+		The fork parameter controls which fork of the file the resource data will be read from. It accepts the following values:
+		
+		* "auto" (the default): Automatically select the correct fork. The resource fork will be used if the file has one and it contains valid resource data. Otherwise the data fork will be used.
+		* "rsrc": Force use of the resource fork and never fall back to the data fork. This will not work on systems other than macOS, because they do not support resource forks natively.
+		* "data": Force use of the data fork, even if a resource fork is present.
+		
+		The rsrcfork parameter is deprecated and will be removed in the future. It has the same purpose as the fork parameter, but accepts different argument values: None stands for "auto", True stands for "rsrc", and False stands for "data". These argument values are less understandable than the string versions and are not easily extensible in the future, which is why the parameter has been deprecated.
 		"""
 		
 		if "close" in kwargs:
@@ -211,7 +217,20 @@ class ResourceFile(collections.abc.Mapping):
 		
 		kwargs["close"] = True
 		
-		if rsrcfork is None:
+		if "rsrcfork" in kwargs:
+			if fork != "auto":
+				raise TypeError("The fork and rsrcfork parameters cannot be used together. Please use only the fork parameter; it replaces the deprecated rsrcfork parameter.")
+			
+			if kwargs["rsrcfork"] is None:
+				fork = "auto"
+			elif kwargs["rsrcfork"]:
+				fork = "rsrc"
+			else:
+				fork = "data"
+			warnings.warn(DeprecationWarning(f"The rsrcfork parameter has been deprecated and will be removed in a future version. Please use fork={fork!r} instead of rsrcfork={kwargs['rsrcfork']!r}."))
+			del kwargs["rsrcfork"]
+		
+		if fork == "auto":
 			# Determine whether the file has a usable resource fork.
 			try:
 				# Try to open the resource fork.
@@ -231,12 +250,14 @@ class ResourceFile(collections.abc.Mapping):
 				except BaseException:
 					f.close()
 					raise
-		elif rsrcfork:
+		elif fork == "rsrc":
 			# Force use of the resource fork.
 			return cls(open(os.path.join(filename, "..namedfork", "rsrc"), "rb"), **kwargs)
-		else:
+		elif fork == "data":
 			# Force use of the data fork.
 			return cls(open(filename, "rb"), **kwargs)
+		else:
+			raise ValueError(f"Unsupported value for the fork parameter: {fork!r}")
 	
 	def __init__(self, stream: typing.io.BinaryIO, *, close: bool=False):
 		"""Create a ResourceFile wrapping the given byte stream.

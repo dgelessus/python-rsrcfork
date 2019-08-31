@@ -196,8 +196,6 @@ def main():
 	
 	ns = ap.parse_args()
 	
-	ns.fork = {"auto": None, "data": False, "rsrc": True}[ns.fork]
-	
 	if ns.file == "-":
 		if ns.fork is not None:
 			print("Cannot specify an explicit fork when reading from stdin", file=sys.stderr)
@@ -205,7 +203,7 @@ def main():
 		
 		rf = api.ResourceFile(sys.stdin.buffer)
 	else:
-		rf = api.ResourceFile.open(ns.file, rsrcfork=ns.fork)
+		rf = api.ResourceFile.open(ns.file, fork=ns.fork)
 	
 	with rf:
 		if ns.header_system or ns.header_application:
