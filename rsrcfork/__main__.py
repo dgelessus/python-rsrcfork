@@ -233,8 +233,18 @@ def main():
 				for reses in rf.values():
 					resources.extend(reses.values())
 			
-			if ns.format in ("hex", "raw") and len(resources) != 1:
-				print(f"Format {ns.format} only supports exactly one resource, but found {len(resources)}", file=sys.stderr)
+			if not resources:
+				if ns.format == "dump":
+					print("No resources matched the filter")
+				elif ns.format in ("hex", "raw"):
+					print("No resources matched the filter", file=sys.stderr)
+					sys.exit(1)
+				elif ns.format == "derez":
+					print("/* No resources matched the filter */")
+				else:
+					raise AssertionError(f"Unhandled output format: {ns.format}")
+			elif ns.format in ("hex", "raw") and len(resources) != 1:
+				print(f"Format {ns.format} can only output a single resource, but the filter matched {len(resources)} resources", file=sys.stderr)
 				sys.exit(1)
 			
 			for res in resources:

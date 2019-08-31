@@ -144,6 +144,8 @@ Version 1.2.0 (next version)
 
   * This fixes reading certain system files with resource data in their data fork (such as HIToolbox.rsrc in HIToolbox.framework, or .dfont fonts) on recent macOS versions (at least macOS 10.14, possibly earlier). Although these files have no resource fork, recent macOS versions will successfully open the resource fork and return garbage data for it. This behavior is now detected and handled by using the data fork instead.
 
+* Added an explanatory message when a resource filter on the command line doesn't match any resources in the resource file. Previously there would either be no output or a confusing error, depending on the selected ``--format``.
+* Improved error messages when attempting to read multiple resources using ``--format=hex`` or ``--format=raw``.
 * Fixed reading from non-seekable streams not working for some resource files.
 * Removed the ``allow_seek`` parameter of ``ResourceFork.__init__`` and the ``--read-mode`` command line option. They are no longer necessary, and were already practically useless before due to non-seekable stream reading being broken.
 
