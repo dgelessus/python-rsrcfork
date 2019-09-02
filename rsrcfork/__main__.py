@@ -160,6 +160,40 @@ def _raw_hexdump(data: bytes):
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
+def _describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
+	id_desc_parts = [f"{res.resource_id}"]
+	
+	if res.name is not None:
+		name = _bytes_escape(res.name, quote='"')
+		id_desc_parts.append(f'"{name}"')
+	
+	id_desc = ", ".join(id_desc_parts)
+	
+	content_desc_parts = []
+	
+	if decompress and api.ResourceAttrs.resCompressed in res.attributes:
+		try:
+			res.data
+		except compress.DecompressError:
+			length_desc = f"decompression failed ({len(res.data_raw)} bytes compressed)"
+		else:
+			length_desc = f"{len(res.data)} bytes ({len(res.data_raw)} bytes compressed)"
+	else:
+		length_desc = f"{len(res.data_raw)} bytes"
+	content_desc_parts.append(length_desc)
+	
+	attrs = _decompose_flags(res.attributes)
+	if attrs:
+		content_desc_parts.append(" | ".join(attr.name for attr in attrs))
+	
+	content_desc = ", ".join(content_desc_parts)
+	
+	desc = f"({id_desc}): {content_desc}"
+	if include_type:
+		restype = _bytes_escape(res.resource_type, quote="'")
+		desc = f"'{restype}' {desc}"
+	return desc
+
 def main():
 	ap = argparse.ArgumentParser(
 		add_help=False,
@@ -253,26 +287,8 @@ def main():
 				
 				if ns.format == "dump":
 					# Human-readable info and hex dump
-					
-					if res.name is None:
-						name = "unnamed"
-					else:
-						name = _bytes_escape(res.name, quote='"')
-						name = f'name "{name}"'
-					
-					attrs = _decompose_flags(res.attributes)
-					if attrs:
-						attrdesc = "attributes: " + " | ".join(attr.name for attr in attrs)
-					else:
-						attrdesc = "no attributes"
-					
-					if ns.decompress:
-						length_desc = f"{len(res.data)} bytes (stored in {len(res.data_raw)} bytes)"
-					else:
-						length_desc = f"{len(data)} bytes"
-					
-					restype = _bytes_escape(res.resource_type, quote="'")
-					print(f"Resource '{restype}' ({res.resource_id}), {name}, {attrdesc}, {length_desc}:")
+					desc = _describe_resource(res, include_type=True, decompress=ns.decompress)
+					print(f"Resource {desc}:")
 					_hexdump(data)
 					print()
 				elif ns.format == "hex":
@@ -332,20 +348,14 @@ def main():
 			if rf.header_system_data != bytes(len(rf.header_system_data)):
 				print("Header system data:")
 				_hexdump(rf.header_system_data)
-			else:
-				print("No header system data")
 			
 			if rf.header_application_data != bytes(len(rf.header_application_data)):
 				print("Header application data:")
 				_hexdump(rf.header_application_data)
-			else:
-				print("No header application data")
 			
 			attrs = _decompose_flags(rf.file_attributes)
 			if attrs:
 				print("File attributes: " + " | ".join(attr.name for attr in attrs))
-			else:
-				print("No file attributes")
 			
 			if len(rf) > 0:
 				print(f"{len(rf)} resource types:")
@@ -353,29 +363,7 @@ def main():
 					restype = _bytes_escape(typecode, quote="'")
 					print(f"'{restype}': {len(resources)} resources:")
 					for resid, res in rf[typecode].items():
-						if res.name is None:
-							name = "unnamed"
-						else:
-							name = _bytes_escape(res.name, quote='"')
-							name = f'name "{name}"'
-						
-						attrs = _decompose_flags(res.attributes)
-						if attrs:
-							attrdesc = " | ".join(attr.name for attr in attrs)
-						else:
-							attrdesc = "no attributes"
-						
-						if ns.decompress and api.ResourceAttrs.resCompressed in attrs:
-							try:
-								res.data
-							except compress.DecompressError:
-								length_desc = f"decompression failed ({len(res.data_raw)} bytes compressed)"
-							else:
-								length_desc = f"{len(res.data)} bytes ({len(res.data_raw)} bytes compressed)"
-						else:
-							length_desc = f"{len(res.data_raw)} bytes"
-						
-						print(f"({resid}), {name}, {attrdesc}, {length_desc}")
+						print(_describe_resource(res, include_type=False, decompress=ns.decompress))
 					print()
 			else:
 				print("No resource types (empty resource file)")

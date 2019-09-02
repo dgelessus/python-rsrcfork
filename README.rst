@@ -149,6 +149,8 @@ Version 1.2.0 (next version)
   * The old ``rsrcfork`` parameter has been deprecated and will be removed in the future, but for now it still works as before.
 
 * Added an explanatory message when a resource filter on the command line doesn't match any resources in the resource file. Previously there would either be no output or a confusing error, depending on the selected ``--format``.
+* Cleaned up the resource descriptions in listings and dumps to improve readability. Previously they included some redundant or unnecessary information - for example, each resource with no attributes set would be explicitly marked as "no attributes".
+* Unified the formats of resource descriptions in listings and dumps, which were previously slightly different from each other.
 * Improved error messages when attempting to read multiple resources using ``--format=hex`` or ``--format=raw``.
 * Fixed reading from non-seekable streams not working for some resource files.
 * Removed the ``allow_seek`` parameter of ``ResourceFork.__init__`` and the ``--read-mode`` command line option. They are no longer necessary, and were already practically useless before due to non-seekable stream reading being broken.
