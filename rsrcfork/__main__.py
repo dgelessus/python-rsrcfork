@@ -35,7 +35,6 @@ def _bytes_unescape(string: str) -> bytes:
 	
 	out = []
 	it = iter(string)
-	n = 0
 	for char in it:
 		if char == "\\":
 			try:
@@ -51,7 +50,6 @@ def _bytes_unescape(string: str) -> bytes:
 				raise ValueError("End of string in escape sequence")
 		else:
 			out.append(ord(char))
-		n += 1
 	
 	return bytes(out)
 
