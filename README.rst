@@ -149,6 +149,7 @@ Version 1.2.0 (next version)
   * The old ``rsrcfork`` parameter has been deprecated and will be removed in the future, but for now it still works as before.
 
 * Added an explanatory message when a resource filter on the command line doesn't match any resources in the resource file. Previously there would either be no output or a confusing error, depending on the selected ``--format``.
+* Changed resource type codes and names to be displayed in MacRoman instead of escaping all non-ASCII characters.
 * Cleaned up the resource descriptions in listings and dumps to improve readability. Previously they included some redundant or unnecessary information - for example, each resource with no attributes set would be explicitly marked as "no attributes".
 * Unified the formats of resource descriptions in listings and dumps, which were previously slightly different from each other.
 * Improved error messages when attempting to read multiple resources using ``--format=hex`` or ``--format=raw``.

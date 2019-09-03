@@ -7,6 +7,9 @@ import typing
 
 from . import __version__, api, compress
 
+# The encoding to use when rendering bytes as text (in four-char codes, strings, hex dumps, etc.) or reading a quoted byte string (from the command line).
+_TEXT_ENCODING = "MacRoman"
+
 # Translation table to replace ASCII non-printable characters with periods.
 _TRANSLATE_NONPRINTABLES = {k: "." for k in [*range(0x20), 0x7f]}
 
@@ -27,8 +30,16 @@ def _decompose_flags(value: F) -> typing.Sequence[F]:
 	
 	return [bit for bit in type(value) if bit in value]
 
+def _is_printable(char: str) -> bool:
+	"""Determine whether a character is printable for our purposes.
+	
+	We mainly use Python's definition of printable (i. e. everything that Unicode does not consider a separator or "other" character). However, we also treat U+F8FF as printable, which is the private use codepoint used for the Apple logo character.
+	"""
+	
+	return char.isprintable() or char == "\uf8ff"
+
 def _bytes_unescape(string: str) -> bytes:
-	"""Convert a string containing ASCII characters and hex escapes to a bytestring.
+	"""Convert a string containing text (in _TEXT_ENCODING) and hex escapes to a bytestring.
 	
 	(We implement our own unescaping mechanism here to not depend on any of Python's string/bytes escape syntax.)
 	"""
@@ -49,23 +60,22 @@ def _bytes_unescape(string: str) -> bytes:
 			except StopIteration:
 				raise ValueError("End of string in escape sequence")
 		else:
-			out.append(ord(char))
+			out.extend(char.encode(_TEXT_ENCODING))
 	
 	return bytes(out)
 
 def _bytes_escape(bs: bytes, *, quote: str=None) -> str:
-	"""Convert a bytestring to a string, with non-ASCII bytes hex-escaped.
+	"""Convert a bytestring to a string (using _TEXT_ENCODING), with non-printable characters hex-escaped.
 	
 	(We implement our own escaping mechanism here to not depend on Python's str or bytes repr.)
 	"""
 	
 	out = []
-	for byte in bs:
-		c = chr(byte)
-		if c in {quote, "\\"}:
-			out.append(f"\\{c}")
-		elif 0x20 <= byte < 0x7f:
-			out.append(c)
+	for byte, char in zip(bs, bs.decode(_TEXT_ENCODING)):
+		if char in {quote, "\\"}:
+			out.append(f"\\{char}")
+		elif _is_printable(char):
+			out.append(char)
 		else:
 			out.append(f"\\x{byte:02x}")
 	
@@ -148,7 +158,7 @@ def _hexdump(data: bytes):
 	for i in range(0, len(data), 16):
 		line = data[i:i + 16]
 		line_hex = " ".join(f"{byte:02x}" for byte in line)
-		line_char = line.decode("MacRoman").translate(_TRANSLATE_NONPRINTABLES)
+		line_char = line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES)
 		print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char}|")
 	
 	if data:
@@ -335,7 +345,7 @@ def main():
 								groups.append(f"{data[i+j]:02X}{data[i+j+1]:02X}")
 						
 						s = f'$"{" ".join(groups)}"'
-						comment = "/* " + data[i:i + 16].decode("MacRoman").translate(_TRANSLATE_NONPRINTABLES) + " */"
+						comment = "/* " + data[i:i + 16].decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES) + " */"
 						print(f"\t{s:<54s}{comment}")
 					
 					print("};")
