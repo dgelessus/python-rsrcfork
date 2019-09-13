@@ -245,6 +245,7 @@ def _parse_args() -> argparse.Namespace:
 	ap.add_argument("-f", "--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource data, or auto to guess (default: %(default)s)")
 	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output compressed resource data as-is")
 	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
+	ap.add_argument("--sort", action="store_true", help="Output resources sorted by type and ID, instead of the order in which they are stored in the file")
 	ap.add_argument("--header-system", action="store_true", help="Output system-reserved header data and nothing else")
 	ap.add_argument("--header-application", action="store_true", help="Output application-specific header data and nothing else")
 	
@@ -355,7 +356,7 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		else:
 			raise ValueError(f"Unhandled output format: {format}")
 
-def _list_resource_file(rf: api.ResourceFile, *, decompress: bool) -> None:
+def _list_resource_file(rf: api.ResourceFile, *, sort: bool, decompress: bool) -> None:
 	if rf.header_system_data != bytes(len(rf.header_system_data)):
 		print("Header system data:")
 		_hexdump(rf.header_system_data)
@@ -370,10 +371,16 @@ def _list_resource_file(rf: api.ResourceFile, *, decompress: bool) -> None:
 	
 	if len(rf) > 0:
 		print(f"{len(rf)} resource types:")
-		for typecode, resources in rf.items():
+		restype_items = rf.items()
+		if sort:
+			restype_items = sorted(restype_items, key=lambda item: item[0])
+		for typecode, resources in restype_items:
 			restype = _bytes_escape(typecode, quote="'")
 			print(f"'{restype}': {len(resources)} resources:")
-			for resid, res in rf[typecode].items():
+			resources_items = resources.items()
+			if sort:
+				resources_items = sorted(resources_items, key=lambda item: item[0])
+			for resid, res in resources_items:
 				print(_describe_resource(res, include_type=False, decompress=decompress))
 			print()
 	else:
@@ -407,9 +414,12 @@ def main():
 				for reses in rf.values():
 					resources.extend(reses.values())
 			
+			if ns.sort:
+				resources.sort(key=lambda res: (res.resource_type, res.resource_id))
+			
 			_show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
-			_list_resource_file(rf, decompress=ns.decompress)
+			_list_resource_file(rf, sort=ns.sort, decompress=ns.decompress)
 	
 	sys.exit(0)
 
