@@ -214,7 +214,7 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 		desc = f"'{restype}' {desc}"
 	return desc
 
-def main():
+def _parse_args() -> argparse.Namespace:
 	ap = argparse.ArgumentParser(
 		add_help=False,
 		fromfile_prefix_chars="@",
@@ -249,6 +249,128 @@ def main():
 	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to display, or omit to show an overview of all resources")
 	
 	ns = ap.parse_args()
+	return ns
+
+def _show_header_data(data: bytes, *, format: str) -> None:
+	if format == "dump":
+		_hexdump(data)
+	elif format == "hex":
+		_raw_hexdump(data)
+	elif format == "raw":
+		sys.stdout.buffer.write(data)
+	elif format == "derez":
+		print("Cannot output file header data in derez format", file=sys.stderr)
+		sys.exit(1)
+	else:
+		raise ValueError(f"Unhandled output format: {format}")
+
+def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: str, decompress: bool) -> None:
+	if not resources:
+		if format == "dump":
+			print("No resources matched the filter")
+		elif format in ("hex", "raw"):
+			print("No resources matched the filter", file=sys.stderr)
+			sys.exit(1)
+		elif format == "derez":
+			print("/* No resources matched the filter */")
+		else:
+			raise AssertionError(f"Unhandled output format: {format}")
+	elif format in ("hex", "raw") and len(resources) != 1:
+		print(f"Format {format} can only output a single resource, but the filter matched {len(resources)} resources", file=sys.stderr)
+		sys.exit(1)
+	
+	for res in resources:
+		if decompress:
+			data = res.data
+		else:
+			data = res.data_raw
+		
+		if format == "dump":
+			# Human-readable info and hex dump
+			desc = _describe_resource(res, include_type=True, decompress=decompress)
+			print(f"Resource {desc}:")
+			_hexdump(data)
+			print()
+		elif format == "hex":
+			# Data only as hex
+			
+			_raw_hexdump(data)
+		elif format == "raw":
+			# Data only as raw bytes
+			
+			sys.stdout.buffer.write(data)
+		elif format == "derez":
+			# Like DeRez with no resource definitions
+			
+			attrs = list(_decompose_flags(res.attributes))
+			
+			if decompress and api.ResourceAttrs.resCompressed in attrs:
+				attrs.remove(api.ResourceAttrs.resCompressed)
+				attrs_comment = " /* was compressed */"
+			else:
+				attrs_comment = ""
+			
+			attr_descs = [_REZ_ATTR_NAMES[attr] for attr in attrs]
+			if None in attr_descs:
+				attr_descs[:] = [f"${res.attributes.value:02X}"]
+			
+			parts = [str(res.resource_id)]
+			
+			if res.name is not None:
+				name = _bytes_escape(res.name, quote='"')
+				parts.append(f'"{name}"')
+			
+			parts += attr_descs
+			
+			restype = _bytes_escape(res.resource_type, quote="'")
+			print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
+			
+			for i in range(0, len(data), 16):
+				# Two-byte grouping is really annoying to implement.
+				groups = []
+				for j in range(0, 16, 2):
+					if i+j >= len(data):
+						break
+					elif i+j+1 >= len(data):
+						groups.append(f"{data[i+j]:02X}")
+					else:
+						groups.append(f"{data[i+j]:02X}{data[i+j+1]:02X}")
+				
+				s = f'$"{" ".join(groups)}"'
+				comment = "/* " + data[i:i + 16].decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES) + " */"
+				print(f"\t{s:<54s}{comment}")
+			
+			print("};")
+			print()
+		else:
+			raise ValueError(f"Unhandled output format: {format}")
+
+def _list_resource_file(rf: api.ResourceFile, *, decompress: bool) -> None:
+	if rf.header_system_data != bytes(len(rf.header_system_data)):
+		print("Header system data:")
+		_hexdump(rf.header_system_data)
+	
+	if rf.header_application_data != bytes(len(rf.header_application_data)):
+		print("Header application data:")
+		_hexdump(rf.header_application_data)
+	
+	attrs = _decompose_flags(rf.file_attributes)
+	if attrs:
+		print("File attributes: " + " | ".join(attr.name for attr in attrs))
+	
+	if len(rf) > 0:
+		print(f"{len(rf)} resource types:")
+		for typecode, resources in rf.items():
+			restype = _bytes_escape(typecode, quote="'")
+			print(f"'{restype}': {len(resources)} resources:")
+			for resid, res in rf[typecode].items():
+				print(_describe_resource(res, include_type=False, decompress=decompress))
+			print()
+	else:
+		print("No resource types (empty resource file)")
+
+def main():
+	ns = _parse_args()
 	
 	if ns.file == "-":
 		if ns.fork is not None:
@@ -266,17 +388,7 @@ def main():
 			else:
 				data = rf.header_application_data
 			
-			if ns.format == "dump":
-				_hexdump(data)
-			elif ns.format == "hex":
-				_raw_hexdump(data)
-			elif ns.format == "raw":
-				sys.stdout.buffer.write(data)
-			elif ns.format == "derez":
-				print("Cannot output file header data in derez format", file=sys.stderr)
-				sys.exit(1)
-			else:
-				raise ValueError(f"Unhandled output format: {ns.format}")
+			_show_header_data(data, format=ns.format)
 		elif ns.filter or ns.all:
 			if ns.filter:
 				resources = _filter_resources(rf, ns.filter)
@@ -285,108 +397,9 @@ def main():
 				for reses in rf.values():
 					resources.extend(reses.values())
 			
-			if not resources:
-				if ns.format == "dump":
-					print("No resources matched the filter")
-				elif ns.format in ("hex", "raw"):
-					print("No resources matched the filter", file=sys.stderr)
-					sys.exit(1)
-				elif ns.format == "derez":
-					print("/* No resources matched the filter */")
-				else:
-					raise AssertionError(f"Unhandled output format: {ns.format}")
-			elif ns.format in ("hex", "raw") and len(resources) != 1:
-				print(f"Format {ns.format} can only output a single resource, but the filter matched {len(resources)} resources", file=sys.stderr)
-				sys.exit(1)
-			
-			for res in resources:
-				if ns.decompress:
-					data = res.data
-				else:
-					data = res.data_raw
-				
-				if ns.format == "dump":
-					# Human-readable info and hex dump
-					desc = _describe_resource(res, include_type=True, decompress=ns.decompress)
-					print(f"Resource {desc}:")
-					_hexdump(data)
-					print()
-				elif ns.format == "hex":
-					# Data only as hex
-					
-					_raw_hexdump(data)
-				elif ns.format == "raw":
-					# Data only as raw bytes
-					
-					sys.stdout.buffer.write(data)
-				elif ns.format == "derez":
-					# Like DeRez with no resource definitions
-					
-					attrs = list(_decompose_flags(res.attributes))
-					
-					if ns.decompress and api.ResourceAttrs.resCompressed in attrs:
-						attrs.remove(api.ResourceAttrs.resCompressed)
-						attrs_comment = " /* was compressed */"
-					else:
-						attrs_comment = ""
-					
-					attr_descs = [_REZ_ATTR_NAMES[attr] for attr in attrs]
-					if None in attr_descs:
-						attr_descs[:] = [f"${res.attributes.value:02X}"]
-					
-					parts = [str(res.resource_id)]
-					
-					if res.name is not None:
-						name = _bytes_escape(res.name, quote='"')
-						parts.append(f'"{name}"')
-					
-					parts += attr_descs
-					
-					restype = _bytes_escape(res.resource_type, quote="'")
-					print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
-					
-					for i in range(0, len(data), 16):
-						# Two-byte grouping is really annoying to implement.
-						groups = []
-						for j in range(0, 16, 2):
-							if i+j >= len(data):
-								break
-							elif i+j+1 >= len(data):
-								groups.append(f"{data[i+j]:02X}")
-							else:
-								groups.append(f"{data[i+j]:02X}{data[i+j+1]:02X}")
-						
-						s = f'$"{" ".join(groups)}"'
-						comment = "/* " + data[i:i + 16].decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES) + " */"
-						print(f"\t{s:<54s}{comment}")
-					
-					print("};")
-					print()
-				else:
-					raise ValueError(f"Unhandled output format: {ns.format}")
+			_show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
-			if rf.header_system_data != bytes(len(rf.header_system_data)):
-				print("Header system data:")
-				_hexdump(rf.header_system_data)
-			
-			if rf.header_application_data != bytes(len(rf.header_application_data)):
-				print("Header application data:")
-				_hexdump(rf.header_application_data)
-			
-			attrs = _decompose_flags(rf.file_attributes)
-			if attrs:
-				print("File attributes: " + " | ".join(attr.name for attr in attrs))
-			
-			if len(rf) > 0:
-				print(f"{len(rf)} resource types:")
-				for typecode, resources in rf.items():
-					restype = _bytes_escape(typecode, quote="'")
-					print(f"'{restype}': {len(resources)} resources:")
-					for resid, res in rf[typecode].items():
-						print(_describe_resource(res, include_type=False, decompress=ns.decompress))
-					print()
-			else:
-				print("No resource types (empty resource file)")
+			_list_resource_file(rf, decompress=ns.decompress)
 	
 	sys.exit(0)
 
