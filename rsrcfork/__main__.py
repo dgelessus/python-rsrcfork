@@ -180,6 +180,9 @@ def _raw_hexdump(data: bytes):
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
+def _translate_text(data: bytes) -> str:
+	return data.decode(_TEXT_ENCODING).replace("\r", "\n")
+
 def _describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
 	id_desc_parts = [f"{res.resource_id}"]
 	
@@ -241,7 +244,7 @@ def _parse_args() -> argparse.Namespace:
 	ap.add_argument("-a", "--all", action="store_true", help="When no filters are given, show all resources in full, instead of an overview")
 	ap.add_argument("-f", "--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource data, or auto to guess (default: %(default)s)")
 	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output compressed resource data as-is")
-	ap.add_argument("--format", choices=["dump", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
+	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
 	ap.add_argument("--header-system", action="store_true", help="Output system-reserved header data and nothing else")
 	ap.add_argument("--header-application", action="store_true", help="Output application-specific header data and nothing else")
 	
@@ -254,6 +257,8 @@ def _parse_args() -> argparse.Namespace:
 def _show_header_data(data: bytes, *, format: str) -> None:
 	if format == "dump":
 		_hexdump(data)
+	elif format == "dump-text":
+		print(_translate_text(data))
 	elif format == "hex":
 		_raw_hexdump(data)
 	elif format == "raw":
@@ -266,7 +271,7 @@ def _show_header_data(data: bytes, *, format: str) -> None:
 
 def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: str, decompress: bool) -> None:
 	if not resources:
-		if format == "dump":
+		if format in ("dump", "dump-text"):
 			print("No resources matched the filter")
 		elif format in ("hex", "raw"):
 			print("No resources matched the filter", file=sys.stderr)
@@ -285,11 +290,16 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		else:
 			data = res.data_raw
 		
-		if format == "dump":
-			# Human-readable info and hex dump
+		if format in ("dump", "dump-text"):
+			# Human-readable info and hex or text dump
 			desc = _describe_resource(res, include_type=True, decompress=decompress)
 			print(f"Resource {desc}:")
-			_hexdump(data)
+			if format == "dump":
+				_hexdump(data)
+			elif format == "dump-text":
+				print(_translate_text(data))
+			else:
+				raise AssertionError(f"Unhandled format: {format!r}")
 			print()
 		elif format == "hex":
 			# Data only as hex
