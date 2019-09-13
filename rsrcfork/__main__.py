@@ -155,11 +155,22 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 	return list(matching.values())
 
 def _hexdump(data: bytes):
+	last_line = None
+	asterisk_shown = False
 	for i in range(0, len(data), 16):
 		line = data[i:i + 16]
-		line_hex = " ".join(f"{byte:02x}" for byte in line)
-		line_char = line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES)
-		print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char}|")
+		# If the same 16-byte lines appear multiple times, print only the first one, and replace all further lines with a single line with an asterisk.
+		# This is unambiguous - to find out how many lines were collapsed this way, the user can compare the addresses of the lines before and after the asterisk.
+		if line == last_line:
+			if not asterisk_shown:
+				print("*")
+				asterisk_shown = True
+		else:
+			line_hex = " ".join(f"{byte:02x}" for byte in line)
+			line_char = line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES)
+			print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char}|")
+			asterisk_shown = False
+		last_line = line
 	
 	if data:
 		print(f"{len(data):08x}")

@@ -130,7 +130,7 @@ Changelog
 Version 1.2.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Changed ``--format=dump`` output to collapse multiple subsequent identical lines into a single ``*``.
 
 Version 1.2.0
 ^^^^^^^^^^^^^
