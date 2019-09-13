@@ -166,9 +166,10 @@ def _hexdump(data: bytes):
 				print("*")
 				asterisk_shown = True
 		else:
-			line_hex = " ".join(f"{byte:02x}" for byte in line)
+			line_hex_left = " ".join(f"{byte:02x}" for byte in line[:8])
+			line_hex_right = " ".join(f"{byte:02x}" for byte in line[8:])
 			line_char = line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES)
-			print(f"{i:08x} {line_hex:<{16*2+15}} |{line_char}|")
+			print(f"{i:08x}  {line_hex_left:<{8*2+7}}  {line_hex_right:<{8*2+7}}  |{line_char}|")
 			asterisk_shown = False
 		last_line = line
 	

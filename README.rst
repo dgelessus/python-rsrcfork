@@ -130,7 +130,7 @@ Changelog
 Version 1.2.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Changed ``--format=dump`` output to collapse multiple subsequent identical lines into a single ``*``.
+* Changed ``--format=dump`` output to match ``hexdump -C``'s format - spacing has been adjusted, and multiple subsequent identical lines are collapsed into a single ``*``.
 
 Version 1.2.0
 ^^^^^^^^^^^^^
