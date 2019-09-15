@@ -96,15 +96,15 @@ class ResourceAttrs(enum.Flag):
 class Resource(object):
 	"""A single resource from a resource file."""
 	
-	__slots__ = ("resource_type", "resource_id", "name", "attributes", "data_raw", "_data_decompressed")
+	__slots__ = ("type", "id", "name", "attributes", "data_raw", "_data_decompressed")
 	
 	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes):
 		"""Create a new resource with the given type code, ID, name, attributes, and data."""
 		
 		super().__init__()
 		
-		self.resource_type: bytes = resource_type
-		self.resource_id: int = resource_id
+		self.type: bytes = resource_type
+		self.id: int = resource_id
 		self.name: typing.Optional[bytes] = name
 		self.attributes: ResourceAttrs = attributes
 		self.data_raw: bytes = data_raw
@@ -126,7 +126,17 @@ class Resource(object):
 		if not decompress_ok:
 			data_repr = f"<decompression failed - compressed data: {data_repr}>"
 		
-		return f"{type(self).__module__}.{type(self).__qualname__}(resource_type={self.resource_type}, resource_id={self.resource_id}, name={self.name}, attributes={self.attributes}, data={data_repr})"
+		return f"{type(self).__module__}.{type(self).__qualname__}(type={self.type}, id={self.id}, name={self.name}, attributes={self.attributes}, data={data_repr})"
+	
+	@property
+	def resource_type(self) -> bytes:
+		warnings.warn(DeprecationWarning("The resource_type attribute has been deprecated and will be removed in a future version. Please use the type attribute instead."))
+		return self.type
+	
+	@property
+	def resource_id(self) -> int:
+		warnings.warn(DeprecationWarning("The resource_id attribute has been deprecated and will be removed in a future version. Please use the id attribute instead."))
+		return self.id
 	
 	@property
 	def data(self) -> bytes:

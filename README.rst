@@ -56,7 +56,7 @@ Simple example
     >>> rf
     <rsrcfork.ResourceFile at 0x1046e6048, attributes ResourceFileAttrs.0, containing 4 resource types: [b'utxt', b'utf8', b'TEXT', b'drag']>
     >>> rf[b"TEXT"]
-    <rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(resource_type=b'TEXT', resource_id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
+    <rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(type=b'TEXT', id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
 
 Automatic selection of data/resource fork
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -133,6 +133,7 @@ Version 1.2.1 (next version)
 * Added a ``--sort`` command line option to output resources sorted by type and ID, instead of using the order stored in the file.
 * Added a ``--group`` command line option to group resources in list format by type (the default), ID, or with no grouping.
 * Added a ``dump-text`` output format to the command line tool. This format is identical to ``dump``, but instead of a hex dump, it outputs the resource data as text. The data is decoded as MacRoman and classic Mac newlines (``\r``) are translated. This is useful for examining resources that contain mostly plain text.
+* Renamed the ``rsrcfork.Resource`` attributes ``resource_type`` and ``resource_id`` to ``type`` and ``id``, respectively. The old names have been deprecated and will be removed in the future, but are still supported for now.
 * Changed ``--format=dump`` output to match ``hexdump -C``'s format - spacing has been adjusted, and multiple subsequent identical lines are collapsed into a single ``*``.
 
 Version 1.2.0

@@ -93,7 +93,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				continue
 			
 			for res in resources.values():
-				matching[res.resource_type, res.resource_id] = res
+				matching[res.type, res.id] = res
 		elif filter[0] == filter[-1] == "'":
 			try:
 				resources = rf[_bytes_unescape(filter[1:-1])]
@@ -101,7 +101,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				continue
 			
 			for res in resources.values():
-				matching[res.resource_type, res.resource_id] = res
+				matching[res.type, res.id] = res
 		else:
 			pos = filter.find("'", 1)
 			if pos == -1:
@@ -134,7 +134,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				
 				for res in resources.values():
 					if res.name == name:
-						matching[res.resource_type, res.resource_id] = res
+						matching[res.type, res.id] = res
 						break
 			elif ":" in resid:
 				if resid.count(":") > 1:
@@ -143,15 +143,15 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				start, end = int(start), int(end)
 				
 				for res in resources.values():
-					if start <= res.resource_id <= end:
-						matching[res.resource_type, res.resource_id] = res
+					if start <= res.id <= end:
+						matching[res.type, res.id] = res
 			else:
 				resid = int(resid)
 				try:
 					res = resources[resid]
 				except KeyError:
 					continue
-				matching[res.resource_type, res.resource_id] = res
+				matching[res.type, res.id] = res
 	
 	return list(matching.values())
 
@@ -185,7 +185,7 @@ def _translate_text(data: bytes) -> str:
 	return data.decode(_TEXT_ENCODING).replace("\r", "\n")
 
 def _describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
-	id_desc_parts = [f"{res.resource_id}"]
+	id_desc_parts = [f"{res.id}"]
 	
 	if res.name is not None:
 		name = _bytes_escape(res.name, quote='"')
@@ -214,7 +214,7 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 	
 	desc = f"({id_desc}): {content_desc}"
 	if include_type:
-		restype = _bytes_escape(res.resource_type, quote="'")
+		restype = _bytes_escape(res.type, quote="'")
 		desc = f"'{restype}' {desc}"
 	return desc
 
@@ -327,7 +327,7 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 			if None in attr_descs:
 				attr_descs[:] = [f"${res.attributes.value:02X}"]
 			
-			parts = [str(res.resource_id)]
+			parts = [str(res.id)]
 			
 			if res.name is not None:
 				name = _bytes_escape(res.name, quote='"')
@@ -335,7 +335,7 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 			
 			parts += attr_descs
 			
-			restype = _bytes_escape(res.resource_type, quote="'")
+			restype = _bytes_escape(res.type, quote="'")
 			print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
 			
 			for i in range(0, len(data), 16):
@@ -380,7 +380,7 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 		for reses in rf.values():
 			all_resources.extend(reses.values())
 		if sort:
-			all_resources.sort(key=lambda res: (res.resource_type, res.resource_id))
+			all_resources.sort(key=lambda res: (res.type, res.id))
 		print(f"{len(all_resources)} resources:")
 		for res in all_resources:
 			print(_describe_resource(res, include_type=True, decompress=decompress))
@@ -402,13 +402,13 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 		all_resources = []
 		for reses in rf.values():
 			all_resources.extend(reses.values())
-		all_resources.sort(key=lambda res: res.resource_id)
-		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(all_resources, key=lambda res: res.resource_id)}
+		all_resources.sort(key=lambda res: res.id)
+		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(all_resources, key=lambda res: res.id)}
 		print(f"{len(resources_by_id)} resource IDs:")
 		for resid, resources in resources_by_id.items():
 			print(f"{resid}: {len(resources)} resources:")
 			if sort:
-				resources.sort(key=lambda res: res.resource_type)
+				resources.sort(key=lambda res: res.type)
 			for res in resources:
 				print(_describe_resource(res, include_type=True, decompress=decompress))
 			print()
@@ -444,7 +444,7 @@ def main():
 					resources.extend(reses.values())
 			
 			if ns.sort:
-				resources.sort(key=lambda res: (res.resource_type, res.resource_id))
+				resources.sort(key=lambda res: (res.type, res.id))
 			
 			_show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
