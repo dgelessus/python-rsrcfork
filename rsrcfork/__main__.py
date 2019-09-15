@@ -1,6 +1,7 @@
 import argparse
 import collections
 import enum
+import itertools
 import sys
 import textwrap
 import typing
@@ -245,6 +246,7 @@ def _parse_args() -> argparse.Namespace:
 	ap.add_argument("-f", "--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource data, or auto to guess (default: %(default)s)")
 	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output compressed resource data as-is")
 	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources - human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez)")
+	ap.add_argument("--group", action="store", choices=["none", "type", "id"], default="type", help="Group resources in list view by type or ID, or disable grouping (default: type)")
 	ap.add_argument("--sort", action="store_true", help="Output resources sorted by type and ID, instead of the order in which they are stored in the file")
 	ap.add_argument("--header-system", action="store_true", help="Output system-reserved header data and nothing else")
 	ap.add_argument("--header-application", action="store_true", help="Output application-specific header data and nothing else")
@@ -356,7 +358,7 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		else:
 			raise ValueError(f"Unhandled output format: {format}")
 
-def _list_resource_file(rf: api.ResourceFile, *, sort: bool, decompress: bool) -> None:
+def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompress: bool) -> None:
 	if rf.header_system_data != bytes(len(rf.header_system_data)):
 		print("Header system data:")
 		_hexdump(rf.header_system_data)
@@ -369,7 +371,20 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, decompress: bool) -
 	if attrs:
 		print("File attributes: " + " | ".join(attr.name for attr in attrs))
 	
-	if len(rf) > 0:
+	if len(rf) == 0:
+		print("No resources (empty resource file)")
+		return
+	
+	if group == "none":
+		all_resources = []
+		for reses in rf.values():
+			all_resources.extend(reses.values())
+		if sort:
+			all_resources.sort(key=lambda res: (res.resource_type, res.resource_id))
+		print(f"{len(all_resources)} resources:")
+		for res in all_resources:
+			print(_describe_resource(res, include_type=True, decompress=decompress))
+	elif group == "type":
 		print(f"{len(rf)} resource types:")
 		restype_items = rf.items()
 		if sort:
@@ -383,8 +398,22 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, decompress: bool) -
 			for resid, res in resources_items:
 				print(_describe_resource(res, include_type=False, decompress=decompress))
 			print()
+	elif group == "id":
+		all_resources = []
+		for reses in rf.values():
+			all_resources.extend(reses.values())
+		all_resources.sort(key=lambda res: res.resource_id)
+		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(all_resources, key=lambda res: res.resource_id)}
+		print(f"{len(resources_by_id)} resource IDs:")
+		for resid, resources in resources_by_id.items():
+			print(f"{resid}: {len(resources)} resources:")
+			if sort:
+				resources.sort(key=lambda res: res.resource_type)
+			for res in resources:
+				print(_describe_resource(res, include_type=True, decompress=decompress))
+			print()
 	else:
-		print("No resource types (empty resource file)")
+		raise AssertionError(f"Unhandled group mode: {group!r}")
 
 def main():
 	ns = _parse_args()
@@ -419,7 +448,7 @@ def main():
 			
 			_show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
-			_list_resource_file(rf, sort=ns.sort, decompress=ns.decompress)
+			_list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
 	sys.exit(0)
 
