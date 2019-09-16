@@ -406,7 +406,7 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(all_resources, key=lambda res: res.id)}
 		print(f"{len(resources_by_id)} resource IDs:")
 		for resid, resources in resources_by_id.items():
-			print(f"{resid}: {len(resources)} resources:")
+			print(f"({resid}): {len(resources)} resources:")
 			if sort:
 				resources.sort(key=lambda res: res.type)
 			for res in resources:
