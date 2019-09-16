@@ -1,6 +1,6 @@
 """A pure Python, cross-platform library/tool for reading Macintosh resource data, as stored in resource forks and ``.rsrc`` files."""
 
-__version__ = "1.3.0"
+__version__ = "1.3.1.dev"
 
 __all__ = [
 	"Resource",
