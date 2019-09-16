@@ -127,8 +127,8 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
-Version 1.2.1 (next version)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version 1.3.0
+^^^^^^^^^^^^^
 
 * Added a ``--group`` command line option to group resources in list format by type (the default), ID, or with no grouping.
 * Added a ``dump-text`` output format to the command line tool. This format is identical to ``dump``, but instead of a hex dump, it outputs the resource data as text. The data is decoded as MacRoman and classic Mac newlines (``\r``) are translated. This is useful for examining resources that contain mostly plain text.
