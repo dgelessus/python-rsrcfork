@@ -130,7 +130,16 @@ Changelog
 Version 1.3.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Added ``length`` and ``length_raw`` attributes to ``Resource``. These attributes are equivalent to the ``len`` of ``data`` and ``data_raw`` respectively, but may be faster to access.
+
+  * Currently, the only optimized case is ``length`` for compressed resources, but more optimizations may be added in the future.
+
+* Added a ``compressed_info`` attribute to ``Resource`` that provides access to the header information of compressed resources.
+* Improved handling of compressed resources when listing resource files with the command line tool.
+
+  * Metadata of compressed resources is now displayed even if no decompressor implementation is available (as long as the compressed data header can be parsed).
+  * Performance has been improved - the data no longer needs to be fully decompressed to get its length, this information is now read from the header.
+  * The ``'dcmp'`` ID used to decompress each resource is displayed.
 
 Version 1.3.0
 ^^^^^^^^^^^^^
