@@ -197,13 +197,13 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 	
 	if decompress and api.ResourceAttrs.resCompressed in res.attributes:
 		try:
-			res.data
+			res.compressed_info
 		except compress.DecompressError:
-			length_desc = f"decompression failed ({len(res.data_raw)} bytes compressed)"
+			length_desc = f"decompression failed ({res.length_raw} bytes compressed)"
 		else:
-			length_desc = f"{len(res.data)} bytes ({len(res.data_raw)} bytes compressed)"
+			length_desc = f"{res.length} bytes ({res.length_raw} bytes compressed)"
 	else:
-		length_desc = f"{len(res.data_raw)} bytes"
+		length_desc = f"{res.length_raw} bytes"
 	content_desc_parts.append(length_desc)
 	
 	attrs = _decompose_flags(res.attributes)

@@ -155,6 +155,27 @@ class Resource(object):
 			return None
 	
 	@property
+	def length_raw(self) -> int:
+		"""The length of the raw resource data, which may be compressed.
+		
+		Accessing this attribute may be faster than computing len(self.data_raw) manually.
+		"""
+		
+		return len(self.data_raw)
+	
+	@property
+	def length(self) -> int:
+		"""The length of the resource data. If the resource data is compressed, this is the length of the data after decompression.
+		
+		Accessing this attribute may be faster than computing len(self.data) manually.
+		"""
+		
+		if ResourceAttrs.resCompressed in self.attributes:
+			return self.compressed_info.decompressed_length
+		else:
+			return self.length_raw
+	
+	@property
 	def data(self) -> bytes:
 		"""The resource data, decompressed if necessary.
 		
