@@ -36,8 +36,11 @@ TABLE = [TABLE_DATA[i:i + 2] for i in range(0, len(TABLE_DATA), 2)]
 assert len(TABLE) == len(range(0x4b, 0xfe))
 
 
-def decompress(header_info: common.CompressedApplicationHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
+def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
 	"""Decompress compressed data in the format used by 'dcmp' (0)."""
+	
+	if not isinstance(header_info, common.CompressedApplicationHeaderInfo):
+		raise common.DecompressError(f"Incorrect header type: {type(header_info.__qualname__)}")
 	
 	prev_literals = []
 	decompressed = b""
