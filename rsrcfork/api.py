@@ -96,7 +96,7 @@ class ResourceAttrs(enum.Flag):
 class Resource(object):
 	"""A single resource from a resource file."""
 	
-	__slots__ = ("type", "id", "name", "attributes", "data_raw", "_data_decompressed")
+	__slots__ = ("type", "id", "name", "attributes", "data_raw", "_compressed_info", "_data_decompressed")
 	
 	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes):
 		"""Create a new resource with the given type code, ID, name, attributes, and data."""
@@ -139,6 +139,22 @@ class Resource(object):
 		return self.id
 	
 	@property
+	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
+		"""The compressed resource header information, or None if this resource is not compressed.
+		
+		Accessing this attribute may raise a DecompressError if the resource data is compressed and the header could not be parsed. To access the unparsed header data, use the data_raw attribute.
+		"""
+		
+		if ResourceAttrs.resCompressed in self.attributes:
+			try:
+				return self._compressed_info
+			except AttributeError:
+				self._compressed_info = compress.common.CompressedHeaderInfo.parse(self.data_raw)
+				return self._compressed_info
+		else:
+			return None
+	
+	@property
 	def data(self) -> bytes:
 		"""The resource data, decompressed if necessary.
 		
@@ -149,7 +165,7 @@ class Resource(object):
 			try:
 				return self._data_decompressed
 			except AttributeError:
-				self._data_decompressed = compress.decompress(self.data_raw)
+				self._data_decompressed = compress.decompress_parsed(self.compressed_info, self.data_raw[self.compressed_info.header_length:])
 				return self._data_decompressed
 		else:
 			return self.data_raw
