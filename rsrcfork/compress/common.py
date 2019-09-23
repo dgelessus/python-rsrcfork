@@ -77,7 +77,7 @@ class CompressedApplicationHeaderInfo(CompressedHeaderInfo):
 		self.expansion_buffer_size: int = expansion_buffer_size
 	
 	def __repr__(self):
-		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type={self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, working_buffer_fractional_size={self.working_buffer_fractional_size}, expansion_buffer_size={self.expansion_buffer_size})"
+		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, working_buffer_fractional_size={self.working_buffer_fractional_size}, expansion_buffer_size={self.expansion_buffer_size})"
 
 
 class CompressedSystemHeaderInfo(CompressedHeaderInfo):
@@ -87,7 +87,7 @@ class CompressedSystemHeaderInfo(CompressedHeaderInfo):
 		self.parameters: bytes = parameters
 	
 	def __repr__(self):
-		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type={self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
+		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
 
 
 def _read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[int, int]:
