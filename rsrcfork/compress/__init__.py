@@ -18,7 +18,7 @@ def _decompress_application(data: bytes, header_info: CompressedApplicationHeade
 	else:
 		raise DecompressError(f"Unsupported 'dcmp' ID: {header_info.dcmp_id}, expected 0 or 1")
 	
-	return decompress_func(data, header_info.decompressed_length, debug=debug)
+	return decompress_func(header_info, data, debug=debug)
 
 
 def _decompress_system(data: bytes, header_info: CompressedSystemHeaderInfo, *, debug: bool=False) -> bytes:
@@ -27,7 +27,7 @@ def _decompress_system(data: bytes, header_info: CompressedSystemHeaderInfo, *, 
 	else:
 		raise DecompressError(f"Unsupported 'dcmp' ID: {header_info.dcmp_id}, expected 2")
 	
-	return decompress_func(data, header_info.decompressed_length, header_info.parameters, debug=debug)
+	return decompress_func(header_info, data, debug=debug)
 
 
 def decompress(data: bytes, *, debug: bool=False) -> bytes:

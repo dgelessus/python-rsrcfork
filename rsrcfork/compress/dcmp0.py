@@ -36,7 +36,7 @@ TABLE = [TABLE_DATA[i:i + 2] for i in range(0, len(TABLE_DATA), 2)]
 assert len(TABLE) == len(range(0x4b, 0xfe))
 
 
-def decompress(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+def decompress(header_info: common.CompressedApplicationHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
 	"""Decompress compressed data in the format used by 'dcmp' (0)."""
 	
 	prev_literals = []
@@ -287,7 +287,7 @@ def decompress(data: bytes, decompressed_length: int, *, debug: bool=False) -> b
 		else:
 			raise common.DecompressError(f"Unknown tag byte: 0x{data[i]:>02x}")
 	
-	if decompressed_length % 2 != 0 and len(decompressed) == decompressed_length + 1:
+	if header_info.decompressed_length % 2 != 0 and len(decompressed) == header_info.decompressed_length + 1:
 		# Special case: if the decompressed data length stored in the header is odd and one less than the length of the actual decompressed data, drop the last byte.
 		# This is necessary because nearly all codes generate data in groups of 2 or 4 bytes, so it is basically impossible to represent data with an odd length using this compression format.
 		decompressed = decompressed[:-1]

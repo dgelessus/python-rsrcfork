@@ -19,7 +19,7 @@ TABLE = [TABLE_DATA[i:i + 2] for i in range(0, len(TABLE_DATA), 2)]
 assert len(TABLE) == len(range(0xd5, 0xfe))
 
 
-def decompress(data: bytes, decompressed_length: int, *, debug: bool=False) -> bytes:
+def decompress(header_info: common.CompressedApplicationHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
 	"""Decompress compressed data in the format used by 'dcmp' (1)."""
 	
 	prev_literals = []

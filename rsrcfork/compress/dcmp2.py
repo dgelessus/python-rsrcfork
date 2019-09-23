@@ -131,10 +131,10 @@ def _decompress_system_tagged(data: bytes, decompressed_length: int, table: typi
 	return b"".join(parts)
 
 
-def decompress(data: bytes, decompressed_length: int, parameters: bytes, *, debug: bool=False) -> bytes:
+def decompress(header_info: common.CompressedSystemHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
 	"""Decompress compressed data in the format used by 'dcmp' (2)."""
 	
-	unknown, table_count_m1, flags_raw = STRUCT_PARAMETERS.unpack(parameters)
+	unknown, table_count_m1, flags_raw = STRUCT_PARAMETERS.unpack(header_info.parameters)
 	
 	if debug:
 		print(f"Value of unknown parameter field: 0x{unknown:>04x}")
@@ -172,4 +172,4 @@ def decompress(data: bytes, decompressed_length: int, parameters: bytes, *, debu
 	else:
 		decompress_func = _decompress_system_untagged
 	
-	return decompress_func(data[data_start:], decompressed_length, table, debug=debug)
+	return decompress_func(data[data_start:], header_info.decompressed_length, table, debug=debug)
