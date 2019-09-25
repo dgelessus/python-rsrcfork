@@ -127,6 +127,11 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
+Version 1.2.0.post1
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
+
 Version 1.2.0
 ^^^^^^^^^^^^^
 
