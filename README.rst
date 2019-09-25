@@ -188,6 +188,18 @@ Version 1.3.1 (next version)
   * Performance has been improved - the data no longer needs to be fully decompressed to get its length, this information is now read from the header.
   * The ``'dcmp'`` ID used to decompress each resource is displayed.
 
+* Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
+
+Version 1.3.0.post1
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
+
+Version 1.2.0.post1
+^^^^^^^^^^^^^^^^^^^
+
+* Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
+
 Version 1.3.0
 ^^^^^^^^^^^^^
 
