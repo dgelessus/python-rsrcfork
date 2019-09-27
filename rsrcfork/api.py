@@ -306,7 +306,7 @@ class ResourceFile(collections.abc.Mapping):
 		else:
 			raise ValueError(f"Unsupported value for the fork parameter: {fork!r}")
 	
-	def __init__(self, stream: typing.io.BinaryIO, *, close: bool=False):
+	def __init__(self, stream: typing.BinaryIO, *, close: bool=False):
 		"""Create a ResourceFile wrapping the given byte stream.
 		
 		To read resource file data from a bytes object, wrap it in an io.BytesIO.
@@ -321,7 +321,7 @@ class ResourceFile(collections.abc.Mapping):
 		super().__init__()
 		
 		self._close_stream: bool = close
-		self._stream: typing.io.BinaryIO
+		self._stream: typing.BinaryIO
 		if stream.seekable():
 			self._stream = stream
 		else:
