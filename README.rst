@@ -190,6 +190,7 @@ Version 1.3.1 (next version)
 
 * Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
 * Fixed ``ResourceFile.__enter__`` returning ``None``, which made it impossible to use ``ResourceFile`` properly in a ``with`` statement.
+* Fixed various minor errors reported by type checking with ``mypy``.
 
 Version 1.3.0.post1
 ^^^^^^^^^^^^^^^^^^^

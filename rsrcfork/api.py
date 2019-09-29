@@ -176,7 +176,7 @@ class Resource(object):
 		Accessing this attribute may be faster than computing len(self.data) manually.
 		"""
 		
-		if ResourceAttrs.resCompressed in self.attributes:
+		if self.compressed_info is not None:
 			return self.compressed_info.decompressed_length
 		else:
 			return self.length_raw
@@ -188,7 +188,7 @@ class Resource(object):
 		Accessing this attribute may raise a DecompressError if the resource data is compressed and could not be decompressed. To access the compressed resource data, use the data_raw attribute.
 		"""
 		
-		if ResourceAttrs.resCompressed in self.attributes:
+		if self.compressed_info is not None:
 			try:
 				return self._data_decompressed
 			except AttributeError:
@@ -227,7 +227,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 			
 			return iter(self._submap)
 		
-		def __contains__(self, key: int) -> bool:
+		def __contains__(self, key: object) -> bool:
 			"""Check if a resource with the given ID exists for this type code."""
 			
 			return key in self._submap
@@ -274,7 +274,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]]]
 	
 	@classmethod
-	def open(cls, filename: typing.Union[str, bytes, os.PathLike], *, fork: str="auto", **kwargs) -> "ResourceFile":
+	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str="auto", **kwargs) -> "ResourceFile":
 		"""Open the file at the given path as a ResourceFile.
 		
 		The fork parameter controls which fork of the file the resource data will be read from. It accepts the following values:
@@ -371,7 +371,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 			raise InvalidResourceFileError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
 		return data
 	
-	def _stream_unpack(self, st: struct.Struct) -> typing.Tuple:
+	def _stream_unpack(self, st: struct.Struct) -> tuple:
 		"""Unpack data from the stream according to the struct st. The number of bytes to read is determined using st.size, so variable-sized structs cannot be used with this method."""
 		
 		try:
@@ -432,7 +432,8 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 		self._references = collections.OrderedDict()
 		
 		for resource_type, count in self._reference_counts.items():
-			self._references[resource_type] = resmap = collections.OrderedDict()
+			resmap: typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]] = collections.OrderedDict()
+			self._references[resource_type] = resmap
 			for _ in range(count):
 				(
 					resource_id,
@@ -470,7 +471,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 		
 		return iter(self._references)
 	
-	def __contains__(self, key: bytes) -> bool:
+	def __contains__(self, key: object) -> bool:
 		"""Check whether this ResourceFile contains any resources of the given type."""
 		
 		return key in self._references

@@ -1,3 +1,5 @@
+import typing
+
 from . import common
 
 # Lookup table for codes in range(0xd5, 0xfe).
@@ -25,7 +27,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 	if not isinstance(header_info, common.CompressedApplicationHeaderInfo):
 		raise common.DecompressError(f"Incorrect header type: {type(header_info).__qualname__}")
 	
-	prev_literals = []
+	prev_literals: typing.List[bytes] = []
 	decompressed = b""
 	
 	i = 0

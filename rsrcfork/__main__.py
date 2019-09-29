@@ -25,7 +25,7 @@ _REZ_ATTR_NAMES = {
 	api.ResourceAttrs.resCompressed: None, # "Extended Header resource attribute"
 }
 
-F = typing.TypeVar("F", bound=enum.Flag, covariant=True)
+F = typing.TypeVar("F", bound=enum.Flag)
 def _decompose_flags(value: F) -> typing.Sequence[F]:
 	"""Decompose an enum.Flags instance into separate enum constants."""
 	
@@ -45,14 +45,14 @@ def _bytes_unescape(string: str) -> bytes:
 	(We implement our own unescaping mechanism here to not depend on any of Python's string/bytes escape syntax.)
 	"""
 	
-	out = []
+	out: typing.List[int] = []
 	it = iter(string)
 	for char in it:
 		if char == "\\":
 			try:
 				esc = next(it)
 				if esc in "\\\'\"":
-					out.append(esc)
+					out.extend(esc.encode(_TEXT_ENCODING))
 				elif esc == "x":
 					x1, x2 = next(it), next(it)
 					out.append(int(x1+x2, 16))
@@ -82,8 +82,8 @@ def _bytes_escape(bs: bytes, *, quote: str=None) -> str:
 	
 	return "".join(out)
 
-def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.Sequence[api.Resource]:
-	matching = collections.OrderedDict()
+def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.List[api.Resource]:
+	matching: typing.MutableMapping[typing.Tuple[bytes, int], api.Resource] = collections.OrderedDict()
 	
 	for filter in filters:
 		if len(filter) == 4:
@@ -109,44 +109,44 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 			elif filter[pos + 1] != " ":
 				raise ValueError(f"Invalid filter {filter!r}: Resource type and ID must be separated by a space")
 			
-			restype, resid = filter[:pos + 1], filter[pos + 2:]
+			restype_str, resid_str = filter[:pos + 1], filter[pos + 2:]
 			
-			if not restype[0] == restype[-1] == "'":
+			if not restype_str[0] == restype_str[-1] == "'":
 				raise ValueError(
-					f"Invalid filter {filter!r}: Resource type is not a single-quoted type identifier: {restype!r}")
-			restype = _bytes_unescape(restype[1:-1])
+					f"Invalid filter {filter!r}: Resource type is not a single-quoted type identifier: {restype_str!r}")
+			restype = _bytes_unescape(restype_str[1:-1])
 			
 			if len(restype) != 4:
 				raise ValueError(
 					f"Invalid filter {filter!r}: Type identifier must be 4 bytes after replacing escapes, got {len(restype)} bytes: {restype!r}")
 			
-			if resid[0] != "(" or resid[-1] != ")":
+			if resid_str[0] != "(" or resid_str[-1] != ")":
 				raise ValueError(f"Invalid filter {filter!r}: Resource ID must be parenthesized")
-			resid = resid[1:-1]
+			resid_str = resid_str[1:-1]
 			
 			try:
 				resources = rf[restype]
 			except KeyError:
 				continue
 			
-			if resid[0] == resid[-1] == '"':
-				name = _bytes_unescape(resid[1:-1])
+			if resid_str[0] == resid_str[-1] == '"':
+				name = _bytes_unescape(resid_str[1:-1])
 				
 				for res in resources.values():
 					if res.name == name:
 						matching[res.type, res.id] = res
 						break
-			elif ":" in resid:
-				if resid.count(":") > 1:
-					raise ValueError(f"Invalid filter {filter!r}: Too many colons in ID range expression: {resid!r}")
-				start, end = resid.split(":")
-				start, end = int(start), int(end)
+			elif ":" in resid_str:
+				if resid_str.count(":") > 1:
+					raise ValueError(f"Invalid filter {filter!r}: Too many colons in ID range expression: {resid_str!r}")
+				start_str, end_str = resid_str.split(":")
+				start, end = int(start_str), int(end_str)
 				
 				for res in resources.values():
 					if start <= res.id <= end:
 						matching[res.type, res.id] = res
 			else:
-				resid = int(resid)
+				resid = int(resid_str)
 				try:
 					res = resources[resid]
 				except KeyError:
@@ -201,8 +201,10 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 		except compress.DecompressError:
 			length_desc = f"unparseable compressed data header ({res.length_raw} bytes compressed)"
 		else:
+			assert res.compressed_info is not None
 			length_desc = f"{res.length} bytes ({res.length_raw} bytes compressed, 'dcmp' ({res.compressed_info.dcmp_id}) format)"
 	else:
+		assert res.compressed_info is None
 		length_desc = f"{res.length_raw} bytes"
 	content_desc_parts.append(length_desc)
 	
@@ -323,9 +325,11 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 			else:
 				attrs_comment = ""
 			
-			attr_descs = [_REZ_ATTR_NAMES[attr] for attr in attrs]
-			if None in attr_descs:
-				attr_descs[:] = [f"${res.attributes.value:02X}"]
+			attr_descs_with_none = [_REZ_ATTR_NAMES[attr] for attr in attrs]
+			if None in attr_descs_with_none:
+				attr_descs = [f"${res.attributes.value:02X}"]
+			else:
+				attr_descs = typing.cast(typing.List[str], attr_descs_with_none)
 			
 			parts = [str(res.id)]
 			
@@ -376,7 +380,7 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 		return
 	
 	if group == "none":
-		all_resources = []
+		all_resources: typing.List[api.Resource] = []
 		for reses in rf.values():
 			all_resources.extend(reses.values())
 		if sort:
@@ -386,13 +390,13 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 			print(_describe_resource(res, include_type=True, decompress=decompress))
 	elif group == "type":
 		print(f"{len(rf)} resource types:")
-		restype_items = rf.items()
+		restype_items: typing.Collection[typing.Tuple[bytes, typing.Mapping[int, api.Resource]]] = rf.items()
 		if sort:
 			restype_items = sorted(restype_items, key=lambda item: item[0])
-		for typecode, resources in restype_items:
+		for typecode, resources_map in restype_items:
 			restype = _bytes_escape(typecode, quote="'")
-			print(f"'{restype}': {len(resources)} resources:")
-			resources_items = resources.items()
+			print(f"'{restype}': {len(resources_map)} resources:")
+			resources_items: typing.Collection[typing.Tuple[int, api.Resource]] = resources_map.items()
 			if sort:
 				resources_items = sorted(resources_items, key=lambda item: item[0])
 			for resid, res in resources_items:
