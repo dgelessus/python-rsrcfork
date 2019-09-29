@@ -98,16 +98,24 @@ class Resource(object):
 	
 	__slots__ = ("type", "id", "name", "attributes", "data_raw", "_compressed_info", "_data_decompressed")
 	
+	type: bytes
+	id: int
+	name: typing.Optional[bytes]
+	attributes: ResourceAttrs
+	data_raw: bytes
+	_compressed_info: compress.common.CompressedHeaderInfo
+	_data_decompressed: bytes
+	
 	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes):
 		"""Create a new resource with the given type code, ID, name, attributes, and data."""
 		
 		super().__init__()
 		
-		self.type: bytes = resource_type
-		self.id: int = resource_id
-		self.name: typing.Optional[bytes] = name
-		self.attributes: ResourceAttrs = attributes
-		self.data_raw: bytes = data_raw
+		self.type = resource_type
+		self.id = resource_id
+		self.name = name
+		self.attributes = attributes
+		self.data_raw = data_raw
 	
 	def __repr__(self):
 		try:
@@ -198,14 +206,18 @@ class ResourceFile(collections.abc.Mapping):
 	class _LazyResourceMap(collections.abc.Mapping):
 		"""Internal class: Lazy mapping of resource IDs to resource objects, returned when subscripting a ResourceFile."""
 		
+		_resfile: "ResourceFile"
+		_restype: bytes
+		_submap: typing.Mapping[int, typing.Tuple[int, ResourceAttrs, int]]
+		
 		def __init__(self, resfile: "ResourceFile", restype: bytes):
 			"""Create a new _LazyResourceMap "containing" all resources in resfile that have the type code restype."""
 			
 			super().__init__()
 			
-			self._resfile: "ResourceFile" = resfile
-			self._restype: bytes = restype
-			self._submap: typing.Mapping[int, typing.Tuple[int, ResourceAttrs, int]] = self._resfile._references[self._restype]
+			self._resfile = resfile
+			self._restype = restype
+			self._submap = self._resfile._references[self._restype]
 		
 		def __len__(self):
 			"""Get the number of resources with this type code."""
@@ -245,6 +257,23 @@ class ResourceFile(collections.abc.Mapping):
 				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing one resource: {next(iter(self.values()))}>"
 			else:
 				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing {len(self)} resources with IDs: {list(self)}>"
+	
+	_close_stream: bool
+	_stream: typing.BinaryIO
+	
+	data_offset: int
+	map_offset: int
+	data_length: int
+	map_length: int
+	header_system_data: bytes
+	header_application_data: bytes
+	
+	map_type_list_offset: int
+	map_name_list_offset: int
+	file_attributes: ResourceFileAttrs
+	
+	_reference_counts: typing.MutableMapping[bytes, int]
+	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]]]
 	
 	@classmethod
 	def open(cls, filename: typing.Union[str, bytes, os.PathLike], *, fork: str="auto", **kwargs) -> "ResourceFile":
@@ -320,8 +349,7 @@ class ResourceFile(collections.abc.Mapping):
 		
 		super().__init__()
 		
-		self._close_stream: bool = close
-		self._stream: typing.BinaryIO
+		self._close_stream = close
 		if stream.seekable():
 			self._stream = stream
 		else:
@@ -358,12 +386,6 @@ class ResourceFile(collections.abc.Mapping):
 		
 		assert self._stream.tell() == 0
 		
-		self.data_offset: int
-		self.map_offset: int
-		self.data_length: int
-		self.map_length: int
-		self.header_system_data: bytes
-		self.header_application_data: bytes
 		(
 			self.data_offset,
 			self.map_offset,
@@ -381,20 +403,18 @@ class ResourceFile(collections.abc.Mapping):
 		
 		assert self._stream.tell() == self.map_offset
 		
-		self.map_type_list_offset: int
-		self.map_name_list_offset: int
 		(
 			_file_attributes,
 			self.map_type_list_offset,
 			self.map_name_list_offset,
 		) = self._stream_unpack(STRUCT_RESOURCE_MAP_HEADER)
 		
-		self.file_attributes: ResourceFileAttrs = ResourceFileAttrs(_file_attributes)
+		self.file_attributes = ResourceFileAttrs(_file_attributes)
 	
 	def _read_all_resource_types(self):
 		"""Read all resource types, starting at the current stream position."""
 		
-		self._reference_counts: typing.MutableMapping[bytes, int] = collections.OrderedDict()
+		self._reference_counts = collections.OrderedDict()
 		
 		(type_list_length_m1,) = self._stream_unpack(STRUCT_RESOURCE_TYPE_LIST_HEADER)
 		type_list_length = (type_list_length_m1 + 1) % 0x10000
@@ -411,11 +431,10 @@ class ResourceFile(collections.abc.Mapping):
 	def _read_all_references(self):
 		"""Read all resource references, starting at the current stream position."""
 		
-		self._references: typing.MutableMapping[bytes, typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]]] = collections.OrderedDict()
+		self._references = collections.OrderedDict()
 		
 		for resource_type, count in self._reference_counts.items():
-			resmap: typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]] = collections.OrderedDict()
-			self._references[resource_type] = resmap
+			self._references[resource_type] = resmap = collections.OrderedDict()
 			for _ in range(count):
 				(
 					resource_id,

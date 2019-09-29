@@ -60,31 +60,41 @@ class CompressedHeaderInfo(object):
 		else:
 			raise DecompressError(f"Unsupported compression type: 0x{compression_type:>04x}")
 	
+	header_length: int
+	compression_type: int
+	decompressed_length: int
+	dcmp_id: int
+	
 	def __init__(self, header_length: int, compression_type: int, decompressed_length: int, dcmp_id: int) -> None:
 		super().__init__()
 		
-		self.header_length: int = header_length
-		self.compression_type: int = compression_type
-		self.decompressed_length: int = decompressed_length
-		self.dcmp_id: int = dcmp_id
+		self.header_length = header_length
+		self.compression_type = compression_type
+		self.decompressed_length = decompressed_length
+		self.dcmp_id = dcmp_id
 
 
 class CompressedApplicationHeaderInfo(CompressedHeaderInfo):
+	working_buffer_fractional_size: int
+	expansion_buffer_size: int
+	
 	def __init__(self, header_length: int, compression_type: int, decompressed_length: int, dcmp_id: int, working_buffer_fractional_size: int, expansion_buffer_size: int) -> None:
 		super().__init__(header_length, compression_type, decompressed_length, dcmp_id)
 		
-		self.working_buffer_fractional_size: int = working_buffer_fractional_size
-		self.expansion_buffer_size: int = expansion_buffer_size
+		self.working_buffer_fractional_size = working_buffer_fractional_size
+		self.expansion_buffer_size = expansion_buffer_size
 	
 	def __repr__(self):
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, working_buffer_fractional_size={self.working_buffer_fractional_size}, expansion_buffer_size={self.expansion_buffer_size})"
 
 
 class CompressedSystemHeaderInfo(CompressedHeaderInfo):
+	parameters: bytes
+	
 	def __init__(self, header_length: int, compression_type: int, decompressed_length: int, dcmp_id: int, parameters: bytes) -> None:
 		super().__init__(header_length, compression_type, decompressed_length, dcmp_id)
 		
-		self.parameters: bytes = parameters
+		self.parameters = parameters
 	
 	def __repr__(self):
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
