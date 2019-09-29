@@ -197,11 +197,11 @@ class Resource(object):
 		else:
 			return self.data_raw
 
-class ResourceFile(collections.abc.Mapping):
+class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 	"""A resource file reader operating on a byte stream."""
 	
 	# noinspection PyProtectedMember
-	class _LazyResourceMap(collections.abc.Mapping):
+	class _LazyResourceMap(typing.Mapping[int, Resource]):
 		"""Internal class: Lazy mapping of resource IDs to resource objects, returned when subscripting a ResourceFile."""
 		
 		_resfile: "ResourceFile"
