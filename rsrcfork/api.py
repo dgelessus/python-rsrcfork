@@ -96,8 +96,6 @@ class ResourceAttrs(enum.Flag):
 class Resource(object):
 	"""A single resource from a resource file."""
 	
-	__slots__ = ("type", "id", "name", "attributes", "data_raw", "_compressed_info", "_data_decompressed")
-	
 	type: bytes
 	id: int
 	name: typing.Optional[bytes]
