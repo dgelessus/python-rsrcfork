@@ -189,6 +189,7 @@ Version 1.3.1 (next version)
   * The ``'dcmp'`` ID used to decompress each resource is displayed.
 
 * Fixed an incorrect ``options.packages`` in ``setup.cfg``, which made the library unusable except when installing from source using ``--editable``.
+* Fixed ``ResourceFile.__enter__`` returning ``None``, which made it impossible to use ``ResourceFile`` properly in a ``with`` statement.
 
 Version 1.3.0.post1
 ^^^^^^^^^^^^^^^^^^^
