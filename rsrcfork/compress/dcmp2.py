@@ -135,7 +135,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 	"""Decompress compressed data in the format used by 'dcmp' (2)."""
 	
 	if not isinstance(header_info, common.CompressedSystemHeaderInfo):
-		raise common.DecompressError(f"Incorrect header type: {type(header_info.__qualname__)}")
+		raise common.DecompressError(f"Incorrect header type: {type(header_info).__qualname__}")
 	
 	unknown, table_count_m1, flags_raw = STRUCT_PARAMETERS.unpack(header_info.parameters)
 	
