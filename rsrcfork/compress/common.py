@@ -84,7 +84,7 @@ class CompressedApplicationHeaderInfo(CompressedHeaderInfo):
 		self.working_buffer_fractional_size = working_buffer_fractional_size
 		self.expansion_buffer_size = expansion_buffer_size
 	
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, working_buffer_fractional_size={self.working_buffer_fractional_size}, expansion_buffer_size={self.expansion_buffer_size})"
 
 
@@ -96,7 +96,7 @@ class CompressedSystemHeaderInfo(CompressedHeaderInfo):
 		
 		self.parameters = parameters
 	
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
 
 

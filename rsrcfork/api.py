@@ -4,6 +4,7 @@ import enum
 import io
 import os
 import struct
+import types
 import typing
 import warnings
 
@@ -197,7 +198,7 @@ class Resource(object):
 		else:
 			return self.data_raw
 
-class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
+class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.ContextManager["ResourceFile"]):
 	"""A resource file reader operating on a byte stream."""
 	
 	# noinspection PyProtectedMember
@@ -274,7 +275,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]]]
 	
 	@classmethod
-	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str="auto", **kwargs) -> "ResourceFile":
+	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str="auto", **kwargs: typing.Any) -> "ResourceFile":
 		"""Open the file at the given path as a ResourceFile.
 		
 		The fork parameter controls which fork of the file the resource data will be read from. It accepts the following values:
@@ -458,8 +459,14 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]]):
 	def __enter__(self) -> "ResourceFile":
 		return self
 	
-	def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+	def __exit__(
+		self,
+		exc_type: typing.Optional[typing.Type[BaseException]],
+		exc_val: typing.Optional[BaseException],
+		exc_tb: typing.Optional[types.TracebackType]
+	) -> typing.Optional[bool]:
 		self.close()
+		return None
 	
 	def __len__(self) -> int:
 		"""Get the number of resource types in this ResourceFile."""

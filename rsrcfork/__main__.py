@@ -65,7 +65,7 @@ def _bytes_unescape(string: str) -> bytes:
 	
 	return bytes(out)
 
-def _bytes_escape(bs: bytes, *, quote: str=None) -> str:
+def _bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
 	"""Convert a bytestring to a string (using _TEXT_ENCODING), with non-printable characters hex-escaped.
 	
 	(We implement our own escaping mechanism here to not depend on Python's str or bytes repr.)
