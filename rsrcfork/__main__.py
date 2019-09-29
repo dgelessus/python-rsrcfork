@@ -155,7 +155,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 	
 	return list(matching.values())
 
-def _hexdump(data: bytes):
+def _hexdump(data: bytes) -> None:
 	last_line = None
 	asterisk_shown = False
 	for i in range(0, len(data), 16):
@@ -177,7 +177,7 @@ def _hexdump(data: bytes):
 	if data:
 		print(f"{len(data):08x}")
 
-def _raw_hexdump(data: bytes):
+def _raw_hexdump(data: bytes) -> None:
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
@@ -415,7 +415,7 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 	else:
 		raise AssertionError(f"Unhandled group mode: {group!r}")
 
-def main():
+def main() -> typing.NoReturn:
 	ns = _parse_args()
 	
 	if ns.file == "-":

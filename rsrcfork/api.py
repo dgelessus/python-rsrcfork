@@ -104,7 +104,7 @@ class Resource(object):
 	_compressed_info: compress.common.CompressedHeaderInfo
 	_data_decompressed: bytes
 	
-	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes):
+	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes) -> None:
 		"""Create a new resource with the given type code, ID, name, attributes, and data."""
 		
 		super().__init__()
@@ -115,7 +115,7 @@ class Resource(object):
 		self.attributes = attributes
 		self.data_raw = data_raw
 	
-	def __repr__(self):
+	def __repr__(self) -> str:
 		try:
 			data = self.data
 		except compress.DecompressError:
@@ -208,7 +208,7 @@ class ResourceFile(collections.abc.Mapping):
 		_restype: bytes
 		_submap: typing.Mapping[int, typing.Tuple[int, ResourceAttrs, int]]
 		
-		def __init__(self, resfile: "ResourceFile", restype: bytes):
+		def __init__(self, resfile: "ResourceFile", restype: bytes) -> None:
 			"""Create a new _LazyResourceMap "containing" all resources in resfile that have the type code restype."""
 			
 			super().__init__()
@@ -217,17 +217,17 @@ class ResourceFile(collections.abc.Mapping):
 			self._restype = restype
 			self._submap = self._resfile._references[self._restype]
 		
-		def __len__(self):
+		def __len__(self) -> int:
 			"""Get the number of resources with this type code."""
 			
 			return len(self._submap)
 		
-		def __iter__(self):
+		def __iter__(self) -> typing.Iterator[int]:
 			"""Iterate over the IDs of all resources with this type code."""
 			
 			return iter(self._submap)
 		
-		def __contains__(self, key: int):
+		def __contains__(self, key: int) -> bool:
 			"""Check if a resource with the given ID exists for this type code."""
 			
 			return key in self._submap
@@ -250,7 +250,7 @@ class ResourceFile(collections.abc.Mapping):
 			
 			return Resource(self._restype, key, name, attributes, data)
 		
-		def __repr__(self):
+		def __repr__(self) -> str:
 			if len(self) == 1:
 				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing one resource: {next(iter(self.values()))}>"
 			else:
@@ -333,7 +333,7 @@ class ResourceFile(collections.abc.Mapping):
 		else:
 			raise ValueError(f"Unsupported value for the fork parameter: {fork!r}")
 	
-	def __init__(self, stream: typing.BinaryIO, *, close: bool=False):
+	def __init__(self, stream: typing.BinaryIO, *, close: bool=False) -> None:
 		"""Create a ResourceFile wrapping the given byte stream.
 		
 		To read resource file data from a bytes object, wrap it in an io.BytesIO.
@@ -379,7 +379,7 @@ class ResourceFile(collections.abc.Mapping):
 		except struct.error as e:
 			raise InvalidResourceFileError(str(e))
 	
-	def _read_header(self):
+	def _read_header(self) -> None:
 		"""Read the resource file header, starting at the current stream position."""
 		
 		assert self._stream.tell() == 0
@@ -396,7 +396,7 @@ class ResourceFile(collections.abc.Mapping):
 		if self._stream.tell() != self.data_offset:
 			raise InvalidResourceFileError(f"The data offset ({self.data_offset}) should point exactly to the end of the file header ({self._stream.tell()})")
 	
-	def _read_map_header(self):
+	def _read_map_header(self) -> None:
 		"""Read the map header, starting at the current stream position."""
 		
 		assert self._stream.tell() == self.map_offset
@@ -409,7 +409,7 @@ class ResourceFile(collections.abc.Mapping):
 		
 		self.file_attributes = ResourceFileAttrs(_file_attributes)
 	
-	def _read_all_resource_types(self):
+	def _read_all_resource_types(self) -> None:
 		"""Read all resource types, starting at the current stream position."""
 		
 		self._reference_counts = collections.OrderedDict()
@@ -426,7 +426,7 @@ class ResourceFile(collections.abc.Mapping):
 			count = (count_m1 + 1) % 0x10000
 			self._reference_counts[resource_type] = count
 	
-	def _read_all_references(self):
+	def _read_all_references(self) -> None:
 		"""Read all resource references, starting at the current stream position."""
 		
 		self._references = collections.OrderedDict()
@@ -445,7 +445,7 @@ class ResourceFile(collections.abc.Mapping):
 				
 				resmap[resource_id] = (name_offset, ResourceAttrs(attributes), data_offset)
 	
-	def close(self):
+	def close(self) -> None:
 		"""Close this ResourceFile.
 		
 		If close=True was passed when this ResourceFile was created, the underlying stream's close method is called as well.
@@ -454,23 +454,23 @@ class ResourceFile(collections.abc.Mapping):
 		if self._close_stream:
 			self._stream.close()
 	
-	def __enter__(self):
+	def __enter__(self) -> "ResourceFile":
 		return self
 	
-	def __exit__(self, exc_type, exc_val, exc_tb):
+	def __exit__(self, exc_type, exc_val, exc_tb) -> None:
 		self.close()
 	
-	def __len__(self):
+	def __len__(self) -> int:
 		"""Get the number of resource types in this ResourceFile."""
 		
 		return len(self._references)
 	
-	def __iter__(self):
+	def __iter__(self) -> typing.Iterator[bytes]:
 		"""Iterate over all resource types in this ResourceFile."""
 		
 		return iter(self._references)
 	
-	def __contains__(self, key: bytes):
+	def __contains__(self, key: bytes) -> bool:
 		"""Check whether this ResourceFile contains any resources of the given type."""
 		
 		return key in self._references
@@ -480,5 +480,5 @@ class ResourceFile(collections.abc.Mapping):
 		
 		return ResourceFile._LazyResourceMap(self, key)
 	
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x}, attributes {self.file_attributes}, containing {len(self)} resource types: {list(self)}>"
