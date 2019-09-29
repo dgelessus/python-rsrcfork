@@ -174,8 +174,8 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
-Version 1.3.1 (next version)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version 1.4.0
+^^^^^^^^^^^^^
 
 * Added ``length`` and ``length_raw`` attributes to ``Resource``. These attributes are equivalent to the ``len`` of ``data`` and ``data_raw`` respectively, but may be faster to access.
 
