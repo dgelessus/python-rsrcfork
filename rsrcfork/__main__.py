@@ -26,12 +26,12 @@ _REZ_ATTR_NAMES = {
 }
 
 F = typing.TypeVar("F", bound=enum.Flag)
-def _decompose_flags(value: F) -> typing.Sequence[F]:
+def decompose_flags(value: F) -> typing.Sequence[F]:
 	"""Decompose an enum.Flags instance into separate enum constants."""
 	
 	return [bit for bit in type(value) if bit in value]
 
-def _is_printable(char: str) -> bool:
+def is_printable(char: str) -> bool:
 	"""Determine whether a character is printable for our purposes.
 	
 	We mainly use Python's definition of printable (i. e. everything that Unicode does not consider a separator or "other" character). However, we also treat U+F8FF as printable, which is the private use codepoint used for the Apple logo character.
@@ -39,7 +39,7 @@ def _is_printable(char: str) -> bool:
 	
 	return char.isprintable() or char == "\uf8ff"
 
-def _bytes_unescape(string: str) -> bytes:
+def bytes_unescape(string: str) -> bytes:
 	"""Convert a string containing text (in _TEXT_ENCODING) and hex escapes to a bytestring.
 	
 	(We implement our own unescaping mechanism here to not depend on any of Python's string/bytes escape syntax.)
@@ -65,7 +65,7 @@ def _bytes_unescape(string: str) -> bytes:
 	
 	return bytes(out)
 
-def _bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
+def bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
 	"""Convert a bytestring to a string (using _TEXT_ENCODING), with non-printable characters hex-escaped.
 	
 	(We implement our own escaping mechanism here to not depend on Python's str or bytes repr.)
@@ -75,14 +75,14 @@ def _bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
 	for byte, char in zip(bs, bs.decode(_TEXT_ENCODING)):
 		if char in {quote, "\\"}:
 			out.append(f"\\{char}")
-		elif _is_printable(char):
+		elif is_printable(char):
 			out.append(char)
 		else:
 			out.append(f"\\x{byte:02x}")
 	
 	return "".join(out)
 
-def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.List[api.Resource]:
+def filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.List[api.Resource]:
 	matching: typing.MutableMapping[typing.Tuple[bytes, int], api.Resource] = collections.OrderedDict()
 	
 	for filter in filters:
@@ -96,7 +96,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				matching[res.type, res.id] = res
 		elif filter[0] == filter[-1] == "'":
 			try:
-				resources = rf[_bytes_unescape(filter[1:-1])]
+				resources = rf[bytes_unescape(filter[1:-1])]
 			except KeyError:
 				continue
 			
@@ -114,7 +114,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 			if not restype_str[0] == restype_str[-1] == "'":
 				raise ValueError(
 					f"Invalid filter {filter!r}: Resource type is not a single-quoted type identifier: {restype_str!r}")
-			restype = _bytes_unescape(restype_str[1:-1])
+			restype = bytes_unescape(restype_str[1:-1])
 			
 			if len(restype) != 4:
 				raise ValueError(
@@ -130,7 +130,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 				continue
 			
 			if resid_str[0] == resid_str[-1] == '"':
-				name = _bytes_unescape(resid_str[1:-1])
+				name = bytes_unescape(resid_str[1:-1])
 				
 				for res in resources.values():
 					if res.name == name:
@@ -155,7 +155,7 @@ def _filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> ty
 	
 	return list(matching.values())
 
-def _hexdump(data: bytes) -> None:
+def hexdump(data: bytes) -> None:
 	last_line = None
 	asterisk_shown = False
 	for i in range(0, len(data), 16):
@@ -177,18 +177,18 @@ def _hexdump(data: bytes) -> None:
 	if data:
 		print(f"{len(data):08x}")
 
-def _raw_hexdump(data: bytes) -> None:
+def raw_hexdump(data: bytes) -> None:
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
-def _translate_text(data: bytes) -> str:
+def translate_text(data: bytes) -> str:
 	return data.decode(_TEXT_ENCODING).replace("\r", "\n")
 
-def _describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
+def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
 	id_desc_parts = [f"{res.id}"]
 	
 	if res.name is not None:
-		name = _bytes_escape(res.name, quote='"')
+		name = bytes_escape(res.name, quote='"')
 		id_desc_parts.append(f'"{name}"')
 	
 	id_desc = ", ".join(id_desc_parts)
@@ -208,7 +208,7 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 		length_desc = f"{res.length_raw} bytes"
 	content_desc_parts.append(length_desc)
 	
-	attrs = _decompose_flags(res.attributes)
+	attrs = decompose_flags(res.attributes)
 	if attrs:
 		content_desc_parts.append(" | ".join(attr.name for attr in attrs))
 	
@@ -216,11 +216,11 @@ def _describe_resource(res: api.Resource, *, include_type: bool, decompress: boo
 	
 	desc = f"({id_desc}): {content_desc}"
 	if include_type:
-		restype = _bytes_escape(res.type, quote="'")
+		restype = bytes_escape(res.type, quote="'")
 		desc = f"'{restype}' {desc}"
 	return desc
 
-def _parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
 	ap = argparse.ArgumentParser(
 		add_help=False,
 		fromfile_prefix_chars="@",
@@ -259,13 +259,13 @@ def _parse_args() -> argparse.Namespace:
 	ns = ap.parse_args()
 	return ns
 
-def _show_header_data(data: bytes, *, format: str) -> None:
+def show_header_data(data: bytes, *, format: str) -> None:
 	if format == "dump":
-		_hexdump(data)
+		hexdump(data)
 	elif format == "dump-text":
-		print(_translate_text(data))
+		print(translate_text(data))
 	elif format == "hex":
-		_raw_hexdump(data)
+		raw_hexdump(data)
 	elif format == "raw":
 		sys.stdout.buffer.write(data)
 	elif format == "derez":
@@ -274,7 +274,7 @@ def _show_header_data(data: bytes, *, format: str) -> None:
 	else:
 		raise ValueError(f"Unhandled output format: {format}")
 
-def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: str, decompress: bool) -> None:
+def show_filtered_resources(resources: typing.Sequence[api.Resource], format: str, decompress: bool) -> None:
 	if not resources:
 		if format in ("dump", "dump-text"):
 			print("No resources matched the filter")
@@ -297,19 +297,19 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		
 		if format in ("dump", "dump-text"):
 			# Human-readable info and hex or text dump
-			desc = _describe_resource(res, include_type=True, decompress=decompress)
+			desc = describe_resource(res, include_type=True, decompress=decompress)
 			print(f"Resource {desc}:")
 			if format == "dump":
-				_hexdump(data)
+				hexdump(data)
 			elif format == "dump-text":
-				print(_translate_text(data))
+				print(translate_text(data))
 			else:
 				raise AssertionError(f"Unhandled format: {format!r}")
 			print()
 		elif format == "hex":
 			# Data only as hex
 			
-			_raw_hexdump(data)
+			raw_hexdump(data)
 		elif format == "raw":
 			# Data only as raw bytes
 			
@@ -317,7 +317,7 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		elif format == "derez":
 			# Like DeRez with no resource definitions
 			
-			attrs = list(_decompose_flags(res.attributes))
+			attrs = list(decompose_flags(res.attributes))
 			
 			if decompress and api.ResourceAttrs.resCompressed in attrs:
 				attrs.remove(api.ResourceAttrs.resCompressed)
@@ -334,12 +334,12 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 			parts = [str(res.id)]
 			
 			if res.name is not None:
-				name = _bytes_escape(res.name, quote='"')
+				name = bytes_escape(res.name, quote='"')
 				parts.append(f'"{name}"')
 			
 			parts += attr_descs
 			
-			restype = _bytes_escape(res.type, quote="'")
+			restype = bytes_escape(res.type, quote="'")
 			print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
 			
 			for i in range(0, len(data), 16):
@@ -362,16 +362,16 @@ def _show_filtered_resources(resources: typing.Sequence[api.Resource], format: s
 		else:
 			raise ValueError(f"Unhandled output format: {format}")
 
-def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompress: bool) -> None:
+def list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompress: bool) -> None:
 	if rf.header_system_data != bytes(len(rf.header_system_data)):
 		print("Header system data:")
-		_hexdump(rf.header_system_data)
+		hexdump(rf.header_system_data)
 	
 	if rf.header_application_data != bytes(len(rf.header_application_data)):
 		print("Header application data:")
-		_hexdump(rf.header_application_data)
+		hexdump(rf.header_application_data)
 	
-	attrs = _decompose_flags(rf.file_attributes)
+	attrs = decompose_flags(rf.file_attributes)
 	if attrs:
 		print("File attributes: " + " | ".join(attr.name for attr in attrs))
 	
@@ -387,20 +387,20 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 			all_resources.sort(key=lambda res: (res.type, res.id))
 		print(f"{len(all_resources)} resources:")
 		for res in all_resources:
-			print(_describe_resource(res, include_type=True, decompress=decompress))
+			print(describe_resource(res, include_type=True, decompress=decompress))
 	elif group == "type":
 		print(f"{len(rf)} resource types:")
 		restype_items: typing.Collection[typing.Tuple[bytes, typing.Mapping[int, api.Resource]]] = rf.items()
 		if sort:
 			restype_items = sorted(restype_items, key=lambda item: item[0])
 		for typecode, resources_map in restype_items:
-			restype = _bytes_escape(typecode, quote="'")
+			restype = bytes_escape(typecode, quote="'")
 			print(f"'{restype}': {len(resources_map)} resources:")
 			resources_items: typing.Collection[typing.Tuple[int, api.Resource]] = resources_map.items()
 			if sort:
 				resources_items = sorted(resources_items, key=lambda item: item[0])
 			for resid, res in resources_items:
-				print(_describe_resource(res, include_type=False, decompress=decompress))
+				print(describe_resource(res, include_type=False, decompress=decompress))
 			print()
 	elif group == "id":
 		all_resources = []
@@ -414,13 +414,13 @@ def _list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompr
 			if sort:
 				resources.sort(key=lambda res: res.type)
 			for res in resources:
-				print(_describe_resource(res, include_type=True, decompress=decompress))
+				print(describe_resource(res, include_type=True, decompress=decompress))
 			print()
 	else:
 		raise AssertionError(f"Unhandled group mode: {group!r}")
 
 def main() -> typing.NoReturn:
-	ns = _parse_args()
+	ns = parse_args()
 	
 	if ns.file == "-":
 		if ns.fork is not None:
@@ -438,10 +438,10 @@ def main() -> typing.NoReturn:
 			else:
 				data = rf.header_application_data
 			
-			_show_header_data(data, format=ns.format)
+			show_header_data(data, format=ns.format)
 		elif ns.filter or ns.all:
 			if ns.filter:
-				resources = _filter_resources(rf, ns.filter)
+				resources = filter_resources(rf, ns.filter)
 			else:
 				resources = []
 				for reses in rf.values():
@@ -450,9 +450,9 @@ def main() -> typing.NoReturn:
 			if ns.sort:
 				resources.sort(key=lambda res: (res.type, res.id))
 			
-			_show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
+			show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
-			_list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
+			list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
 	sys.exit(0)
 

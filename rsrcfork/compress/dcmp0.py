@@ -137,7 +137,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Segment loader jump table entries")
 				
 				# All generated jump table entries have the same segment number.
-				segment_number_int, length = common._read_variable_length_integer(data, i)
+				segment_number_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				if debug:
 					print(f"\t-> segment number: {segment_number_int:#x}")
@@ -149,13 +149,13 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 				# The tail is output once *without* an address in front, i. e. the first entry's address must be generated manually by a previous code.
 				decompressed += entry_tail
 				
-				count, length = common._read_variable_length_integer(data, i)
+				count, length = common.read_variable_length_integer(data, i)
 				i += length
 				if count <= 0:
 					raise common.DecompressError(f"Jump table entry count must be greater than 0, not {count}")
 				
 				# The second entry's address is stored explicitly.
-				current_int, length = common._read_variable_length_integer(data, i)
+				current_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				if debug:
 					print(f"-> address of second entry: {current_int:#x}")
@@ -166,7 +166,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 				
 				for _ in range(1, count):
 					# All further entries' addresses are stored as differences relative to the previous entry's address.
-					diff, length = common._read_variable_length_integer(data, i)
+					diff, length = common.read_variable_length_integer(data, i)
 					i += length
 					# For some reason, each difference is 6 higher than it should be.
 					diff -= 6
@@ -193,14 +193,14 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Repeat {byte_count}-byte value")
 				
 				# The byte(s) to repeat, stored as a variable-length integer. The value is treated as unsigned, i. e. the integer is never negative.
-				to_repeat_int, length = common._read_variable_length_integer(data, i)
+				to_repeat_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				try:
 					to_repeat = to_repeat_int.to_bytes(byte_count, "big", signed=False)
 				except OverflowError:
 					raise common.DecompressError(f"Value to repeat out of range for {byte_count}-byte repeat: {to_repeat_int:#x}")
 				
-				count_m1, length = common._read_variable_length_integer(data, i)
+				count_m1, length = common.read_variable_length_integer(data, i)
 				i += length
 				count = count_m1 + 1
 				if count <= 0:
@@ -217,7 +217,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Difference-encoded 16-bit integers")
 				
 				# The first integer is stored explicitly, as a signed value.
-				initial_int, length = common._read_variable_length_integer(data, i)
+				initial_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				try:
 					initial = initial_int.to_bytes(2, "big", signed=True)
@@ -227,7 +227,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"\t-> initial: {initial}")
 				decompressed += initial
 				
-				count, length = common._read_variable_length_integer(data, i)
+				count, length = common.read_variable_length_integer(data, i)
 				i += length
 				if count < 0:
 					raise common.DecompressError(f"Count cannot be negative: {count}")
@@ -253,7 +253,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Difference-encoded 16-bit integers")
 				
 				# The first integer is stored explicitly, as a signed value.
-				initial_int, length = common._read_variable_length_integer(data, i)
+				initial_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				try:
 					initial = initial_int.to_bytes(4, "big", signed=True)
@@ -263,7 +263,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"\t-> initial: {initial}")
 				decompressed += initial
 				
-				count, length = common._read_variable_length_integer(data, i)
+				count, length = common.read_variable_length_integer(data, i)
 				i += length
 				assert count >= 0
 				
@@ -271,7 +271,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 				current_int = initial_int & 0xffffffff
 				for _ in range(count):
 					# The difference to the previous integer is stored as a variable-length integer, whose value may be negative.
-					diff, length = common._read_variable_length_integer(data, i)
+					diff, length = common.read_variable_length_integer(data, i)
 					i += length
 					
 					# Simulate 32-bit integer wraparound.

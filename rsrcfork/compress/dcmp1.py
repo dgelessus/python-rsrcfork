@@ -124,14 +124,14 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Repeat {byte_count}-byte value")
 				
 				# The byte(s) to repeat, stored as a variable-length integer. The value is treated as unsigned, i. e. the integer is never negative.
-				to_repeat_int, length = common._read_variable_length_integer(data, i)
+				to_repeat_int, length = common.read_variable_length_integer(data, i)
 				i += length
 				try:
 					to_repeat = to_repeat_int.to_bytes(byte_count, "big", signed=False)
 				except OverflowError:
 					raise common.DecompressError(f"Value to repeat out of range for {byte_count}-byte repeat: {to_repeat_int:#x}")
 				
-				count_m1, length = common._read_variable_length_integer(data, i)
+				count_m1, length = common.read_variable_length_integer(data, i)
 				i += length
 				count = count_m1 + 1
 				if count <= 0:

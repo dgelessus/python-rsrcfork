@@ -100,7 +100,7 @@ class CompressedSystemHeaderInfo(CompressedHeaderInfo):
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
 
 
-def _read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[int, int]:
+def read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[int, int]:
 	"""Read a variable-length integer starting at the given position in the data, and return the integer as well as the number of bytes consumed.
 	
 	This variable-length integer format is used by the 0xfe codes in the compression formats used by 'dcmp' (0) and 'dcmp' (1).
