@@ -250,7 +250,7 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 				# A sequence of 32-bit signed integers, with each integer encoded as a difference relative to the previous integer. The first integer is stored explicitly.
 				
 				if debug:
-					print(f"Difference-encoded 16-bit integers")
+					print(f"Difference-encoded 32-bit integers")
 				
 				# The first integer is stored explicitly, as a signed value.
 				initial_int, length = common.read_variable_length_integer(data, i)
