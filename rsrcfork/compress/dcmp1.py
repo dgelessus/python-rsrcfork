@@ -1,3 +1,4 @@
+import io
 import typing
 
 from . import common
@@ -21,99 +22,75 @@ TABLE = [TABLE_DATA[i:i + 2] for i in range(0, len(TABLE_DATA), 2)]
 assert len(TABLE) == len(range(0xd5, 0xfe))
 
 
-def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
-	"""Decompress compressed data in the format used by 'dcmp' (1)."""
+def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+	"""Internal helper function, implements the main decompression algorithm. Only called from decompress_stream, which performs some extra checks and debug logging."""
 	
 	if not isinstance(header_info, common.CompressedApplicationHeaderInfo):
 		raise common.DecompressError(f"Incorrect header type: {type(header_info).__qualname__}")
 	
 	prev_literals: typing.List[bytes] = []
-	decompressed = b""
 	
-	i = 0
-	
-	while i < len(data):
-		byte = data[i]
+	while True: # Loop is terminated when the EOF marker (0xff) is encountered
+		(byte,) = common.read_exact(stream, 1)
 		if debug:
-			print(f"Tag byte 0x{byte:>02x}, at 0x{i:x}, decompressing to 0x{len(decompressed):x}")
+			print(f"Tag byte 0x{byte:>02x}")
 		
 		if byte in range(0x00, 0x20):
 			# Literal byte sequence, 1-byte header.
 			# The length of the literal data is stored in the low nibble of the tag byte.
 			count = (byte >> 0 & 0xf) + 1
-			begin = i + 1
-			end = begin + count
 			# Controls whether or not the literal is stored so that it can be referenced again later.
 			do_store = byte >= 0x10
-			literal = data[begin:end]
+			literal = common.read_exact(stream, count)
 			if debug:
 				print(f"Literal (1-byte header, storing: {do_store})")
-				print(f"\t-> {literal}")
-			decompressed += literal
 			if do_store:
 				if debug:
-					print(f"\t-> stored as literal number 0x{len(prev_literals):x}")
+					print(f"\t-> storing as literal number 0x{len(prev_literals):x}")
 				prev_literals.append(literal)
-			i = end
+			yield literal
 		elif byte in range(0x20, 0xd0):
 			# Backreference to a previous literal, 1-byte form.
 			# This can reference literals with indices in range(0xb0).
 			table_index = byte - 0x20
-			i += 1
 			if debug:
 				print(f"Backreference (1-byte form) to 0x{table_index:>02x}")
-			literal = prev_literals[table_index]
-			if debug:
-				print(f"\t-> {literal}")
-			decompressed += literal
+			yield prev_literals[table_index]
 		elif byte in (0xd0, 0xd1):
 			# Literal byte sequence, 2-byte header.
 			# The length of the literal data is stored in the following byte.
-			count = data[i+1]
-			begin = i + 2
-			end = begin + count
+			(count,) = common.read_exact(stream, 1)
 			# Controls whether or not the literal is stored so that it can be referenced again later.
 			do_store = byte == 0xd1
-			literal = data[begin:end]
+			literal = common.read_exact(stream, count)
 			if debug:
 				print(f"Literal (2-byte header, storing: {do_store})")
-				print(f"\t-> {literal}")
-			decompressed += literal
 			if do_store:
 				if debug:
-					print(f"\t-> stored as literal number 0x{len(prev_literals):x}")
+					print(f"\t-> storing as literal number 0x{len(prev_literals):x}")
 				prev_literals.append(literal)
-			i = end
+			yield literal
 		elif byte == 0xd2:
 			# Backreference to a previous literal, 2-byte form.
 			# This can reference literals with indices in range(0xb0, 0x1b0).
-			table_index = data[i+1] + 0xb0
-			i += 2
+			(next_byte,) = common.read_exact(stream, 1)
+			table_index = next_byte + 0xb0
 			if debug:
 				print(f"Backreference (2-byte form) to 0x{table_index:>02x}")
-			literal = prev_literals[table_index]
-			if debug:
-				print(f"\t-> {literal}")
-			decompressed += literal
+			yield prev_literals[table_index]
 		elif byte in range(0xd5, 0xfe):
 			# Reference into a fixed table of two-byte literals.
 			# All compressed resources use the same table.
 			table_index = byte - 0xd5
-			i += 1
 			if debug:
 				print(f"Fixed table reference to 0x{table_index:>02x}")
-			entry = TABLE[table_index]
-			if debug:
-				print(f"\t-> {entry}")
-			decompressed += entry
+			yield TABLE[table_index]
 		elif byte == 0xfe:
 			# Extended code, whose meaning is controlled by the following byte.
 			
-			i += 1
-			kind = data[i]
+			(kind,) = common.read_exact(stream, 1)
 			if debug:
 				print(f"Extended code: 0x{kind:>02x}")
-			i += 1
 			
 			if kind == 0x02:
 				# Repeat 1 byte a certain number of times.
@@ -124,33 +101,47 @@ def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: 
 					print(f"Repeat {byte_count}-byte value")
 				
 				# The byte(s) to repeat, stored as a variable-length integer. The value is treated as unsigned, i. e. the integer is never negative.
-				to_repeat_int, length = common.read_variable_length_integer(data, i)
-				i += length
+				to_repeat_int = common.read_variable_length_integer(stream)
 				try:
 					to_repeat = to_repeat_int.to_bytes(byte_count, "big", signed=False)
 				except OverflowError:
 					raise common.DecompressError(f"Value to repeat out of range for {byte_count}-byte repeat: {to_repeat_int:#x}")
 				
-				count_m1, length = common.read_variable_length_integer(data, i)
-				i += length
-				count = count_m1 + 1
+				count = common.read_variable_length_integer(stream) + 1
 				if count <= 0:
 					raise common.DecompressError(f"Repeat count must be positive: {count}")
 				
-				repeated = to_repeat * count
 				if debug:
-					print(f"\t-> {to_repeat} * {count}: {repeated}")
-				decompressed += repeated
+					print(f"\t-> {to_repeat} * {count}")
+				yield to_repeat * count
 			else:
 				raise common.DecompressError(f"Unknown extended code: 0x{kind:>02x}")
 		elif byte == 0xff:
 			# End of data marker, always occurs exactly once as the last byte of the compressed data.
 			if debug:
 				print("End marker")
-			if i != len(data) - 1:
-				raise common.DecompressError(f"End marker reached at {i}, before the expected end of data at {len(data) - 1}")
-			i += 1
+			
+			# Check that there really is no more data left.
+			extra = stream.read(1)
+			if extra:
+				raise common.DecompressError(f"Extra data encountered after end of data marker (first extra byte: {extra})")
+			break
 		else:
-			raise common.DecompressError(f"Unknown tag byte: 0x{data[i]:>02x}")
+			raise common.DecompressError(f"Unknown tag byte: 0x{byte:>02x}")
+
+def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+	"""Decompress compressed data in the format used by 'dcmp' (1)."""
 	
-	return decompressed
+	decompressed_length = 0
+	for chunk in decompress_stream_inner(header_info, stream, debug=debug):
+		if debug:
+			print(f"\t-> {chunk}")
+		
+		decompressed_length += len(chunk)
+		yield chunk
+		
+		if debug:
+			print(f"Decompressed {decompressed_length:#x} bytes so far")
+
+def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
+	return b"".join(decompress_stream(header_info, io.BytesIO(data), debug=debug))

@@ -100,19 +100,26 @@ class CompressedSystemHeaderInfo(CompressedHeaderInfo):
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, parameters={self.parameters!r})"
 
 
-def read_variable_length_integer(data: bytes, position: int) -> typing.Tuple[int, int]:
-	"""Read a variable-length integer starting at the given position in the data, and return the integer as well as the number of bytes consumed.
+def read_exact(stream: typing.BinaryIO, byte_count: int) -> bytes:
+	"""Read byte_count bytes from the stream and raise an exception if too few bytes are read (i. e. if EOF was hit prematurely)."""
+	
+	data = stream.read(byte_count)
+	if len(data) != byte_count:
+		raise DecompressError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
+	return data
+
+def read_variable_length_integer(stream: typing.BinaryIO) -> int:
+	"""Read a variable-length integer from the stream.
 	
 	This variable-length integer format is used by the 0xfe codes in the compression formats used by 'dcmp' (0) and 'dcmp' (1).
 	"""
 	
-	assert len(data) > position
-	if data[position] == 0xff:
-		assert len(data) > position + 4
-		return int.from_bytes(data[position+1:position+5], "big", signed=True), 5
-	elif data[position] >= 0x80:
-		assert len(data) > position + 1
-		data_modified = bytes([(data[position] - 0xc0) & 0xff, data[position+1]])
-		return int.from_bytes(data_modified, "big", signed=True), 2
+	head = read_exact(stream, 1)
+	
+	if head[0] == 0xff:
+		return int.from_bytes(read_exact(stream, 4), "big", signed=True)
+	elif head[0] >= 0x80:
+		data_modified = bytes([(head[0] - 0xc0) & 0xff]) + read_exact(stream, 1)
+		return int.from_bytes(data_modified, "big", signed=True)
 	else:
-		return int.from_bytes(data[position:position+1], "big", signed=True), 1
+		return int.from_bytes(head, "big", signed=True)
