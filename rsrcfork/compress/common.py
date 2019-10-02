@@ -37,9 +37,9 @@ STRUCT_COMPRESSED_SYSTEM_HEADER = struct.Struct(">h4s")
 
 class CompressedHeaderInfo(object):
 	@classmethod
-	def parse(cls, data: bytes) -> "CompressedHeaderInfo":
+	def parse_stream(cls, stream: typing.BinaryIO) -> "CompressedHeaderInfo":
 		try:
-			signature, header_length, compression_type, decompressed_length, remainder = STRUCT_COMPRESSED_HEADER.unpack_from(data)
+			signature, header_length, compression_type, decompressed_length, remainder = STRUCT_COMPRESSED_HEADER.unpack(stream.read(STRUCT_COMPRESSED_HEADER.size))
 		except struct.error:
 			raise DecompressError(f"Invalid header")
 		if signature != COMPRESSED_SIGNATURE:
@@ -60,6 +60,10 @@ class CompressedHeaderInfo(object):
 			return CompressedSystemHeaderInfo(header_length, compression_type, decompressed_length, dcmp_id, parameters)
 		else:
 			raise DecompressError(f"Unsupported compression type: 0x{compression_type:>04x}")
+	
+	@classmethod
+	def parse(cls, data: bytes) -> "CompressedHeaderInfo":
+		return cls.parse_stream(io.BytesIO(data))
 	
 	header_length: int
 	compression_type: int

@@ -175,6 +175,3 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 		decompress_func = _decompress_system_untagged
 	
 	yield from decompress_func(common.make_peekable(stream), header_info.decompressed_length, table, debug=debug)
-
-def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
-	return b"".join(decompress_stream(header_info, io.BytesIO(data), debug=debug))

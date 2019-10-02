@@ -267,6 +267,3 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 		
 		if debug:
 			print(f"Decompressed {decompressed_length:#x} bytes so far")
-
-def decompress(header_info: common.CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
-	return b"".join(decompress_stream(header_info, io.BytesIO(data), debug=debug))
