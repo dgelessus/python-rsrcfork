@@ -177,7 +177,10 @@ Changelog
 Version 1.4.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Added stream-based decompression methods to the ``rsrcfork.compress`` module.
+
+  * The internal decompressor implementations have been refactored to use streams.
+  * This allows for incremental decompression of compressed resource data. In practice this has no noticeable effect yet, because the main ``rsrcfork`` API doesn't support incremental reading of resource data.
 
 Version 1.4.0
 ^^^^^^^^^^^^^
