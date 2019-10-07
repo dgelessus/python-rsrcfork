@@ -9,30 +9,30 @@ class DecompressError(Exception):
 
 # The signature of all compressed resource data, 0xa89f6572 in hex, or "®üer" in MacRoman.
 COMPRESSED_SIGNATURE = b"\xa8\x9fer"
-# The compression type commonly used for application resources.
-COMPRESSED_TYPE_APPLICATION = 0x0801
-# The compression type commonly used for System file resources.
-COMPRESSED_TYPE_SYSTEM = 0x0901
+# The number of the "type 8" compression type. This type is used in the Finder, ResEdit, and some other system files.
+COMPRESSED_TYPE_8 = 0x0801
+# The number of the "type 9" compression type. This type is used in the System file and System 7.5's Installer.
+COMPRESSED_TYPE_9 = 0x0901
 
 # Common header for compressed resources of all types.
 # 4 bytes: Signature (see above).
 # 2 bytes: Length of the complete header (this common part and the type-specific part that follows it). (This meaning is just a guess - the field's value is always 0x0012, so there's no way to know for certain what it means.)
-# 2 bytes: Compression type. Known so far: 0x0901 is used in the System file's resources. 0x0801 is used in other files' resources.
+# 2 bytes: Compression type. Known so far: 0x0801 ("type 8") and 0x0901 ("type 9").
 # 4 bytes: Length of the data after decompression.
 # 6 bytes: Remainder of the header. The exact format varies depending on the compression type.
 STRUCT_COMPRESSED_HEADER = struct.Struct(">4sHHI6s")
 
-# Remainder of header for an "application" compressed resource.
+# Remainder of header for a "type 8" compressed resource.
 # 1 byte: "Working buffer fractional size" - the ratio of the compressed data size to the uncompressed data size, times 256.
 # 1 byte: "Expansion buffer size" - the maximum number of bytes that the data might grow during decompression.
 # 2 bytes: The ID of the 'dcmp' resource that can decompress this resource. Currently only ID 0 is supported.
 # 2 bytes: Reserved (always zero).
-STRUCT_COMPRESSED_APPLICATION_HEADER = struct.Struct(">BBhH")
+STRUCT_COMPRESSED_TYPE_8_HEADER = struct.Struct(">BBhH")
 
-# Remainder of header for a "system" compressed resource.
+# Remainder of header for a "type 9" compressed resource.
 # 2 bytes: The ID of the 'dcmp' resource that can decompress this resource. Currently only ID 2 is supported.
 # 4 bytes: Decompressor-specific parameters.
-STRUCT_COMPRESSED_SYSTEM_HEADER = struct.Struct(">h4s")
+STRUCT_COMPRESSED_TYPE_9_HEADER = struct.Struct(">h4s")
 
 
 class CompressedHeaderInfo(object):
@@ -47,17 +47,17 @@ class CompressedHeaderInfo(object):
 		if header_length != 0x12:
 			raise DecompressError(f"Unsupported header length: 0x{header_length:>04x}, expected 0x12")
 		
-		if compression_type == COMPRESSED_TYPE_APPLICATION:
-			working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_APPLICATION_HEADER.unpack(remainder)
+		if compression_type == COMPRESSED_TYPE_8:
+			working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_TYPE_8_HEADER.unpack(remainder)
 			
 			if reserved != 0:
 				raise DecompressError(f"Reserved field should be 0, not 0x{reserved:>04x}")
 			
-			return CompressedApplicationHeaderInfo(header_length, compression_type, decompressed_length, dcmp_id, working_buffer_fractional_size, expansion_buffer_size)
-		elif compression_type == COMPRESSED_TYPE_SYSTEM:
-			dcmp_id, parameters = STRUCT_COMPRESSED_SYSTEM_HEADER.unpack(remainder)
+			return CompressedType8HeaderInfo(header_length, compression_type, decompressed_length, dcmp_id, working_buffer_fractional_size, expansion_buffer_size)
+		elif compression_type == COMPRESSED_TYPE_9:
+			dcmp_id, parameters = STRUCT_COMPRESSED_TYPE_9_HEADER.unpack(remainder)
 			
-			return CompressedSystemHeaderInfo(header_length, compression_type, decompressed_length, dcmp_id, parameters)
+			return CompressedType9HeaderInfo(header_length, compression_type, decompressed_length, dcmp_id, parameters)
 		else:
 			raise DecompressError(f"Unsupported compression type: 0x{compression_type:>04x}")
 	
@@ -79,7 +79,7 @@ class CompressedHeaderInfo(object):
 		self.dcmp_id = dcmp_id
 
 
-class CompressedApplicationHeaderInfo(CompressedHeaderInfo):
+class CompressedType8HeaderInfo(CompressedHeaderInfo):
 	working_buffer_fractional_size: int
 	expansion_buffer_size: int
 	
@@ -93,7 +93,7 @@ class CompressedApplicationHeaderInfo(CompressedHeaderInfo):
 		return f"{type(self).__qualname__}(header_length={self.header_length}, compression_type=0x{self.compression_type:>04x}, decompressed_length={self.decompressed_length}, dcmp_id={self.dcmp_id}, working_buffer_fractional_size={self.working_buffer_fractional_size}, expansion_buffer_size={self.expansion_buffer_size})"
 
 
-class CompressedSystemHeaderInfo(CompressedHeaderInfo):
+class CompressedType9HeaderInfo(CompressedHeaderInfo):
 	parameters: bytes
 	
 	def __init__(self, header_length: int, compression_type: int, decompressed_length: int, dcmp_id: int, parameters: bytes) -> None:

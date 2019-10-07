@@ -74,7 +74,7 @@ def _split_bits(i: int) -> typing.Tuple[bool, bool, bool, bool, bool, bool, bool
 	)
 
 
-def _decompress_system_untagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> typing.Iterator[bytes]:
+def _decompress_untagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> typing.Iterator[bytes]:
 	while True: # Loop is terminated when EOF is reached.
 		table_index_data = stream.read(1)
 		if not table_index_data:
@@ -93,7 +93,7 @@ def _decompress_system_untagged(stream: "common.PeekableIO", decompressed_length
 			print(f"Reference: {table_index} -> {table[table_index]}")
 		yield table[table_index]
 
-def _decompress_system_tagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> typing.Iterator[bytes]:
+def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> typing.Iterator[bytes]:
 	while True: # Loop is terminated when EOF is reached.
 		tag_data = stream.read(1)
 		if not tag_data:
@@ -136,7 +136,7 @@ def _decompress_system_tagged(stream: "common.PeekableIO", decompressed_length: 
 def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
 	"""Decompress compressed data in the format used by 'dcmp' (2)."""
 	
-	if not isinstance(header_info, common.CompressedSystemHeaderInfo):
+	if not isinstance(header_info, common.CompressedType9HeaderInfo):
 		raise common.DecompressError(f"Incorrect header type: {type(header_info).__qualname__}")
 	
 	unknown, table_count_m1, flags_raw = STRUCT_PARAMETERS.unpack(header_info.parameters)
@@ -170,8 +170,8 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 			print("Using default table")
 	
 	if ParameterFlags.TAGGED in flags:
-		decompress_func = _decompress_system_tagged
+		decompress_func = _decompress_tagged
 	else:
-		decompress_func = _decompress_system_untagged
+		decompress_func = _decompress_untagged
 	
 	yield from decompress_func(common.make_peekable(stream), header_info.decompressed_length, table, debug=debug)

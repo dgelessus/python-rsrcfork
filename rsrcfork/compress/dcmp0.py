@@ -42,7 +42,7 @@ assert len(TABLE) == len(range(0x4b, 0xfe))
 def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
 	"""Internal helper function, implements the main decompression algorithm. Only called from decompress_stream, which performs some extra checks and debug logging."""
 	
-	if not isinstance(header_info, common.CompressedApplicationHeaderInfo):
+	if not isinstance(header_info, common.CompressedType8HeaderInfo):
 		raise common.DecompressError(f"Incorrect header type: {type(header_info).__qualname__}")
 	
 	prev_literals: typing.List[bytes] = []
