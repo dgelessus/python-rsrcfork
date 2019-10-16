@@ -182,6 +182,8 @@ Version 1.4.1 (next version)
   * The internal decompressor implementations have been refactored to use streams.
   * This allows for incremental decompression of compressed resource data. In practice this has no noticeable effect yet, because the main ``rsrcfork`` API doesn't support incremental reading of resource data.
 
+* Fixed the command line tool always displaying an incorrect error "Cannot specify an explicit fork when reading from stdin" when using ``-`` (stdin) as the input file.
+
 Version 1.4.0
 ^^^^^^^^^^^^^
 

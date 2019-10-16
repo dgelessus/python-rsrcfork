@@ -423,7 +423,7 @@ def main() -> typing.NoReturn:
 	ns = parse_args()
 	
 	if ns.file == "-":
-		if ns.fork is not None:
+		if ns.fork != "auto":
 			print("Cannot specify an explicit fork when reading from stdin", file=sys.stderr)
 			sys.exit(1)
 		
