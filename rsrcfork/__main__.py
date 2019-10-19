@@ -2,6 +2,7 @@ import argparse
 import collections
 import enum
 import itertools
+import pathlib
 import sys
 import textwrap
 import typing
@@ -220,7 +221,7 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 		desc = f"'{restype}' {desc}"
 	return desc
 
-def parse_args() -> argparse.Namespace:
+def parse_args_old(args: typing.List[str]) -> argparse.Namespace:
 	ap = argparse.ArgumentParser(
 		add_help=False,
 		fromfile_prefix_chars="@",
@@ -256,7 +257,7 @@ def parse_args() -> argparse.Namespace:
 	ap.add_argument("file", help="The file to read, or - for stdin")
 	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to display, or omit to show an overview of all resources")
 	
-	ns = ap.parse_args()
+	ns = ap.parse_args(args)
 	return ns
 
 def show_header_data(data: bytes, *, format: str) -> None:
@@ -419,8 +420,8 @@ def list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompre
 	else:
 		raise AssertionError(f"Unhandled group mode: {group!r}")
 
-def main() -> typing.NoReturn:
-	ns = parse_args()
+def main_old(args: typing.List[str]) -> typing.NoReturn:
+	ns = parse_args_old(args)
 	
 	if ns.file == "-":
 		if ns.fork != "auto":
@@ -455,6 +456,291 @@ def main() -> typing.NoReturn:
 			list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
 	sys.exit(0)
+
+
+def make_argument_parser(*, description: str, **kwargs: typing.Any) -> argparse.ArgumentParser:
+	"""Create an argparse.ArgumentParser with some slightly modified defaults.
+	
+	This function is used to ensure that all subcommands use the same base configuration for their ArgumentParser.
+	"""
+	
+	ap = argparse.ArgumentParser(
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+		description=textwrap.dedent(description),
+		allow_abbrev=False,
+		add_help=False,
+		**kwargs,
+	)
+	
+	ap.add_argument("--help", action="help", help="Display this help message and exit")
+	
+	return ap
+
+def add_resource_file_args(ap: argparse.ArgumentParser) -> None:
+	"""Define common options/arguments for specifying an input resource file.
+	
+	This includes a positional argument for the resource file's path, and the ``--fork`` option to select which fork of the file to use.
+	"""
+	
+	ap.add_argument("--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource file data, or auto to guess. Default: %(default)s")
+	ap.add_argument("file", help="The file from which to read resources, or - for stdin.")
+
+def open_resource_file(file: str, *, fork: str = None) -> api.ResourceFile:
+	"""Open a resource file at the given path, using the specified fork."""
+	
+	if file == "-":
+		if fork != "auto":
+			print("Cannot specify an explicit fork when reading from stdin", file=sys.stderr)
+			sys.exit(1)
+		
+		return api.ResourceFile(sys.stdin.buffer)
+	else:
+		return api.ResourceFile.open(file, fork=fork)
+
+
+def do_read_header(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Read the header data from a resource file."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+		Read and output a resource file's header data.
+		
+		The header data consists of two parts:
+		
+		The system-reserved data is 112 bytes long and used by the Classic Mac OS
+		Finder as temporary storage space. It usually contains parts of the
+		file metadata (name, type/creator code, etc.).
+		
+		The application-specific data is 128 bytes long and is available for use by
+		applications. In practice it usually contains junk data that happened to be in
+		memory when the resource file was written.
+		
+		Mac OS X does not use the header data fields anymore. Resource files written
+		on Mac OS X normally have both parts of the header data set to all zero bytes.
+		""",
+	)
+	
+	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw"], default="dump", help="How to output the header data: human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), or data only as raw bytes (raw). Default: %(default)s")
+	ap.add_argument("--part", choices=["system", "application", "all"], default="all", help="Which part of the header to read. Default: %(default)s")
+	add_resource_file_args(ap)
+	
+	ns = ap.parse_args(args)
+	
+	with open_resource_file(ns.file, fork=ns.fork) as rf:
+		if ns.format in {"dump", "dump-text"}:
+			if ns.format == "dump":
+				dump_func = hexdump
+			elif ns.format == "dump-text":
+				def dump_func(d):
+					print(translate_text(d))
+			else:
+				raise AssertionError(f"Unhandled --format: {ns.format!r}")
+			
+			if ns.part in {"system", "all"}:
+				print("System-reserved header data:")
+				dump_func(rf.header_system_data)
+			
+			if ns.part in {"application", "all"}:
+				print("Application-specific header data:")
+				dump_func(rf.header_application_data)
+		elif ns.format in {"hex", "raw"}:
+			if ns.part == "system":
+				data = rf.header_system_data
+			elif ns.part == "application":
+				data = rf.header_application_data
+			elif ns.part == "all":
+				data = rf.header_system_data + rf.header_application_data
+			else:
+				raise AssertionError(f"Unhandled --part: {ns.part!r}")
+			
+			if ns.format == "hex":
+				raw_hexdump(data)
+			elif ns.format == "raw":
+				sys.stdout.buffer.write(data)
+			else:
+				raise AssertionError(f"Unhandled --format: {ns.format!r}")
+		else:
+			raise AssertionError(f"Unhandled --format: {ns.format!r}")
+
+def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""List the resources in a file."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+		List the resources stored in a resource file.
+		
+		Each resource's type, ID, name (if any), attributes (if any), and data length
+		are displayed. For compressed resources, the compressed and decompressed data
+		length are displayed, as well as the ID of the 'dcmp' resource used to
+		decompress the resource data.
+		
+		If the resource file has any global (resource map) attributes or non-zero
+		header data, they are displayed before the list of resources.
+		""",
+	)
+	
+	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the data header of compressed resources and only output their compressed length.")
+	ap.add_argument("--group", action="store", choices=["none", "type", "id"], default="type", help="Group resources by type or ID, or disable grouping. Default: %(default)s")
+	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap)
+	
+	ns = ap.parse_args(args)
+	
+	with open_resource_file(ns.file, fork=ns.fork) as rf:
+		list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
+	
+def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Read data from resources."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+		Read the data of one or more resources.
+		
+		The resource filters use syntax similar to Rez (resource definition) files.
+		Each filter can have one of the following forms:
+		
+		An unquoted type name (without escapes): TYPE
+		A quoted type name: 'TYPE'
+		A quoted type name and an ID: 'TYPE' (42)
+		A quoted type name and an ID range: 'TYPE' (24:42)
+		A quoted type name and a resource name: 'TYPE' ("foobar")
+		
+		Note that the resource filter syntax uses quotes, parentheses and spaces,
+		which have special meanings in most shells. It is recommended to quote each
+		resource filter (using double quotes) to ensure that it is not interpreted
+		or rewritten by the shell.
+		""",
+	)
+	
+	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output the raw compressed resource data.")
+	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources: human-readable info with hex dump (dump), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez). Default: %(default)s")
+	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap)
+	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to read. If no filters ae specified, all resources are read.")
+	
+	ns = ap.parse_args(args)
+	
+	with open_resource_file(ns.file, fork=ns.fork) as rf:
+		if ns.filter:
+			resources = filter_resources(rf, ns.filter)
+		else:
+			resources = []
+			for reses in rf.values():
+				resources.extend(reses.values())
+		
+		if ns.sort:
+			resources.sort(key=lambda res: (res.type, res.id))
+		
+		show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
+
+
+SUBCOMMANDS = {
+	"read-header": do_read_header,
+	"list": do_list,
+	"read": do_read,
+}
+
+
+def format_subcommands_help() -> str:
+	"""Return a formatted help text describing the availble subcommands.
+	
+	Because we do not use argparse's native support for subcommands (see comments in main function), the main ArgumentParser's help does not include any information about the subcommands by default, so we have to format and add it ourselves.
+	"""
+	
+	# The list of subcommands is formatted using a "fake" ArgumentParser, which is never actually used to parse any arguments.
+	# The options are chosen so that the help text will only include the subcommands list and epilog, but no usage or any other arguments.
+	fake_ap = argparse.ArgumentParser(
+		usage=argparse.SUPPRESS,
+		epilog=textwrap.dedent("""
+		Most of the above subcommands take additional arguments. Run a subcommand with
+		the option --help for help about the options understood by that subcommand.
+		"""),
+		add_help=False,
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+	)
+	
+	# The subcommands are added as positional arguments to a custom group with the title "subcommands".
+	# Semantically this makes no sense, but it looks right in the formatted help text:
+	# the result is a section "subcommands" with an aligned list of command names and short descriptions.
+	fake_group = fake_ap.add_argument_group(title="subcommands")
+	
+	for name, func in SUBCOMMANDS.items():
+		# Each command's short description is taken from the implementation function's docstring.
+		fake_group.add_argument(name, help=func.__doc__)
+	
+	return fake_ap.format_help()
+
+
+def main() -> typing.NoReturn:
+	"""Main function of the CLI.
+	
+	This function is a valid setuptools entry point. Arguments are passed in sys.argv, and every execution path ends with a sys.exit call. (setuptools entry points are also permitted to return an integer, which will be treated as an exit code. We do not use this feature and instead always call sys.exit ourselves.)
+	"""
+	
+	prog = pathlib.PurePath(sys.argv[0]).name
+	args = sys.argv[1:]
+	
+	# The rsrcfork CLI is structured into subcommands, each implemented in a separate function.
+	# The main function parses the command-line arguments enough to determine which subcommand to call, but leaves parsing of the rest of the arguments to the subcommand itself.
+	# In addition, it detects use of the old, non-subcommand-based CLI syntax, and delegates to the old main function in that case.
+	# This backwards compatibility handling is one of the reasons why we cannot use the subcommand support of argparse or other CLI parsing libraries, so we have to implement most of the subcommand handling ourselves.
+	
+	ap = make_argument_parser(
+		prog=prog,
+		# Custom usage string to make "subcommand ..." show up in the usage, but not as "positional arguments" in the main help text.
+		usage=f"{prog} (--help | --version | subcommand ...)",
+		description="""
+		%(prog)s is a tool for working with Classic Mac OS resource files.
+		Currently this tool can only read resource files; modifying/writing resource
+		files is not supported yet.
+		
+		Note: This tool is intended for human users. The output format is not
+		machine-readable and may change at any time. The command-line syntax usually
+		does not change much across versions, but this should not be relied on.
+		Automated scripts and programs should use the Python API provided by the
+		rsrcfork library, which this tool is a part of.
+		""",
+		# The list of subcommands is shown in the epilog so that it appears under the list of optional arguments.
+		epilog=format_subcommands_help(),
+	)
+	
+	ap.add_argument("--version", action="version", version=__version__, help="Display version information and exit.")
+	
+	# The help of these arguments is set to argparse.SUPPRESS so that they do not cause a mostly useless "positional arguments" list to appear.
+	# If the old, non-subcommand syntax is used, the subcommand argument can actually be a file name.
+	ap.add_argument("subcommand", help=argparse.SUPPRESS)
+	ap.add_argument("args", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
+	
+	if not args:
+		print(f"{prog}: Missing subcommand.", file=sys.stderr)
+		ap.print_help()
+		sys.exit(2)
+	
+	# First, parse only known arguments from the CLI.
+	# This is so that we can extract the subcommand/file to check if the old CLI syntax was used, without causing CLI syntax errors because of unknown options before the subcommand/file.
+	ns, _ = ap.parse_known_args(args)
+	
+	try:
+		# Check if the subcommand is valid.
+		subcommand_func = SUBCOMMANDS[ns.subcommand]
+	except KeyError:
+		if ns.subcommand == "-" or pathlib.Path(ns.subcommand).exists():
+			# Subcommand is actually a file path.
+			# Call the old main function with the entire unparsed argument list, so that it can be reparsed and handled like in previous versions.
+			main_old(args)
+		else:
+			# Subcommand is invalid and also not a path to an existing file. Display an error.
+			print(f"{prog}: Unknown subcommand: {ns.subcommand}", file=sys.stderr)
+			print(f"Run {prog} --help for a list of available subcommands.", file=sys.stderr)
+			sys.exit(2)
+	else:
+		# Subcommand is valid. Parse the arguments again, this time without allowing unknown arguments before the subcommand.
+		ns = ap.parse_args(args)
+		# Call the looked up subcommand and pass on further arguments.
+		subcommand_func(f"{prog} {ns.subcommand}", ns.args)
 
 if __name__ == "__main__":
 	sys.exit(main())

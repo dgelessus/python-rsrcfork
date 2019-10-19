@@ -177,7 +177,12 @@ Changelog
 Version 1.5.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Added a new subcommand-based command-line syntax to the ``rsrcfork`` tool, similar to other CLI tools such as ``git`` or ``diskutil``.
+
+  * This subcommand-based syntax is meant to replace the old CLI options, as the subcommand structure is easier to understand and more extensible in the future.
+  * Currently there are three subcommands: ``list`` to list resources in a file, ``read`` to read/display resource data, and ``read-header`` to read a resource file's header data. These subcommands can be used to perform all operations that were also available with the old CLI syntax.
+  * The old CLI syntax is still supported for now, but it will be removed soon.
+  * The new syntax no longer supports reading CLI arguments from a file (using ``@args_file.txt``), abbreviating long options (e. g. ``--no-d`` instead of ``--no-decompress``), or the short option ``-f`` instead of ``--fork``. If you have a need for any of these features, please open an issue.
 
 Version 1.5.0
 ^^^^^^^^^^^^^
