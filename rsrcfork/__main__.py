@@ -433,17 +433,31 @@ def main_old(args: typing.List[str]) -> typing.NoReturn:
 		rf = api.ResourceFile.open(ns.file, fork=ns.fork)
 	
 	with rf:
+		print("Warning: The syntax of the rsrcfork command has changed.", file=sys.stderr)
+		
 		if ns.header_system or ns.header_application:
 			if ns.header_system:
+				print('Please use "rsrcfork read-header --part=system <file>" instead of "rsrcfork --header-system <file>".', file=sys.stderr)
+				print(file=sys.stderr)
+				
 				data = rf.header_system_data
 			else:
+				print('Please use "rsrcfork read-header --part=application <file>" instead of "rsrcfork --header-application <file>".', file=sys.stderr)
+				print(file=sys.stderr)
+				
 				data = rf.header_application_data
 			
 			show_header_data(data, format=ns.format)
 		elif ns.filter or ns.all:
 			if ns.filter:
+				print('Please use "rsrcfork read <file> <filters...>" instead of "rsrcfork <file> <filters...>".', file=sys.stderr)
+				print(file=sys.stderr)
+				
 				resources = filter_resources(rf, ns.filter)
 			else:
+				print('Please use "rsrcfork read <file>" instead of "rsrcfork <file> --all".', file=sys.stderr)
+				print(file=sys.stderr)
+				
 				resources = []
 				for reses in rf.values():
 					resources.extend(reses.values())
@@ -453,6 +467,9 @@ def main_old(args: typing.List[str]) -> typing.NoReturn:
 			
 			show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 		else:
+			print('Please use "rsrcfork list <file>" instead of "rsrcfork <file>".', file=sys.stderr)
+			print(file=sys.stderr)
+			
 			list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
 	sys.exit(0)
