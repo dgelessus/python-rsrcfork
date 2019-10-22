@@ -364,18 +364,6 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 			raise ValueError(f"Unhandled output format: {format}")
 
 def list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompress: bool) -> None:
-	if rf.header_system_data != bytes(len(rf.header_system_data)):
-		print("Header system data:")
-		hexdump(rf.header_system_data)
-	
-	if rf.header_application_data != bytes(len(rf.header_application_data)):
-		print("Header application data:")
-		hexdump(rf.header_application_data)
-	
-	attrs = decompose_flags(rf.file_attributes)
-	if attrs:
-		print("File attributes: " + " | ".join(attr.name for attr in attrs))
-	
 	if len(rf) == 0:
 		print("No resources (empty resource file)")
 		return
@@ -469,6 +457,18 @@ def main_old(args: typing.List[str]) -> typing.NoReturn:
 		else:
 			print('Please use "rsrcfork list <file>" instead of "rsrcfork <file>".', file=sys.stderr)
 			print(file=sys.stderr)
+			
+			if rf.header_system_data != bytes(len(rf.header_system_data)):
+				print("Header system data:")
+				hexdump(rf.header_system_data)
+			
+			if rf.header_application_data != bytes(len(rf.header_application_data)):
+				print("Header application data:")
+				hexdump(rf.header_application_data)
+			
+			attrs = decompose_flags(rf.file_attributes)
+			if attrs:
+				print("File attributes: " + " | ".join(attr.name for attr in attrs))
 			
 			list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
