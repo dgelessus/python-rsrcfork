@@ -580,6 +580,38 @@ def do_read_header(prog: str, args: typing.List[str]) -> typing.NoReturn:
 		else:
 			raise AssertionError(f"Unhandled --format: {ns.format!r}")
 
+def do_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Display technical information about the resource file."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+		Display technical information and stats about the resource file.
+		""",
+	)
+	add_resource_file_args(ap)
+	
+	ns = ap.parse_args(args)
+	
+	with open_resource_file(ns.file, fork=ns.fork) as rf:
+		print("System-reserved header data:")
+		hexdump(rf.header_system_data)
+		print()
+		print("Application-specific header data:")
+		hexdump(rf.header_application_data)
+		print()
+		
+		print(f"Resource data starts at {rf.data_offset:#x} and is {rf.data_length:#x} bytes long")
+		print(f"Resource map starts at {rf.map_offset:#x} and is {rf.map_length:#x} bytes long")
+		attrs = decompose_flags(rf.file_attributes)
+		if attrs:
+			attrs_desc = " | ".join(attr.name for attr in attrs)
+		else:
+			attrs_desc = "(none)"
+		print(f"Resource map attributes: {attrs_desc}")
+		print(f"Resource map type list starts at {rf.map_type_list_offset:#x} (relative to map start) and contains {len(rf)} types")
+		print(f"Resource map name list starts at {rf.map_name_list_offset:#x} (relative to map start)")
+
 def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""List the resources in a file."""
 	
@@ -656,6 +688,7 @@ def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 
 SUBCOMMANDS = {
 	"read-header": do_read_header,
+	"info": do_info,
 	"list": do_list,
 	"read": do_read,
 }
