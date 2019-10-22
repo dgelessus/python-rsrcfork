@@ -174,8 +174,8 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
-Version 1.4.1 (next version)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version 1.5.0
+^^^^^^^^^^^^^
 
 * Added stream-based decompression methods to the ``rsrcfork.compress`` module.
 
