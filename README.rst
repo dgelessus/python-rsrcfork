@@ -174,6 +174,11 @@ If these links are no longer functional, some are archived in the `Internet Arch
 Changelog
 ---------
 
+Version 1.5.1 (next version)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* (no changes yet)
+
 Version 1.5.0
 ^^^^^^^^^^^^^
 
