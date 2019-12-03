@@ -140,7 +140,7 @@ class Resource(object):
 		if not decompress_ok:
 			data_repr = f"<decompression failed - compressed data: {data_repr}>"
 		
-		return f"{type(self).__module__}.{type(self).__qualname__}(type={self.type}, id={self.id}, name={self.name}, attributes={self.attributes}, data={data_repr})"
+		return f"<{type(self).__qualname__} type {self.type}, id {self.id}, name {self.name}, attributes {self.attributes}, data {data_repr}>"
 	
 	@property
 	def resource_type(self) -> bytes:
@@ -235,13 +235,15 @@ class _LazyResourceMap(typing.Mapping[int, Resource]):
 	This class behaves like a normal read-only mapping. The main difference to a plain dict (or similar mapping) is that this mapping has a specialized repr to avoid excessive output when working in the REPL.
 	"""
 	
+	type: bytes
 	_submap: typing.Mapping[int, Resource]
 	
-	def __init__(self, submap: typing.Mapping[int, Resource]) -> None:
+	def __init__(self, resource_type: bytes, submap: typing.Mapping[int, Resource]) -> None:
 		"""Create a new _LazyResourceMap that wraps the given mapping."""
 		
 		super().__init__()
 		
+		self.type = resource_type
 		self._submap = submap
 	
 	def __len__(self) -> int:
@@ -266,9 +268,11 @@ class _LazyResourceMap(typing.Mapping[int, Resource]):
 	
 	def __repr__(self) -> str:
 		if len(self) == 1:
-			return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing one resource: {next(iter(self.values()))}>"
+			contents = f"one resource: {next(iter(self.values()))}"
 		else:
-			return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing {len(self)} resources with IDs: {list(self)}>"
+			contents = f"{len(self)} resources with IDs {list(self)}"
+		
+		return f"<Resource map for type {self.type}, containing {contents}>"
 
 class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.ContextManager["ResourceFile"]):
 	"""A resource file reader operating on a byte stream."""
@@ -502,7 +506,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	def __getitem__(self, key: bytes) -> "_LazyResourceMap":
 		"""Get a lazy mapping of all resources with the given type in this ResourceFile."""
 		
-		return _LazyResourceMap(self._references[key])
+		return _LazyResourceMap(key, self._references[key])
 	
 	def __repr__(self) -> str:
 		return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x}, attributes {self.file_attributes}, containing {len(self)} resource types: {list(self)}>"
