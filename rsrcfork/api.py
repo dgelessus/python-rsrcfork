@@ -234,20 +234,19 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	
 	# noinspection PyProtectedMember
 	class _LazyResourceMap(typing.Mapping[int, Resource]):
-		"""Internal class: Lazy mapping of resource IDs to resource objects, returned when subscripting a ResourceFile."""
+		"""Internal class: Read-only wrapper for a mapping of resource IDs to resource objects.
 		
-		_resfile: "ResourceFile"
-		_restype: bytes
-		_submap: typing.Mapping[int, typing.Tuple[int, ResourceAttrs, int]]
+		This class behaves like a normal read-only mapping. The main difference to a plain dict (or similar mapping) is that this mapping has a specialized repr to avoid excessive output when working in the REPL.
+		"""
 		
-		def __init__(self, resfile: "ResourceFile", restype: bytes) -> None:
-			"""Create a new _LazyResourceMap "containing" all resources in resfile that have the type code restype."""
+		_submap: typing.Mapping[int, Resource]
+		
+		def __init__(self, submap: typing.Mapping[int, Resource]) -> None:
+			"""Create a new _LazyResourceMap that wraps the given mapping."""
 			
 			super().__init__()
 			
-			self._resfile = resfile
-			self._restype = restype
-			self._submap = self._resfile._references[self._restype]
+			self._submap = submap
 		
 		def __len__(self) -> int:
 			"""Get the number of resources with this type code."""
@@ -267,9 +266,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 		def __getitem__(self, key: int) -> Resource:
 			"""Get a resource with the given ID for this type code."""
 			
-			name_offset, attributes, data_offset = self._submap[key]
-			
-			return Resource(self._resfile, self._restype, key, name_offset, attributes, data_offset)
+			return self._submap[key]
 		
 		def __repr__(self) -> str:
 			if len(self) == 1:
@@ -292,7 +289,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	file_attributes: ResourceFileAttrs
 	
 	_reference_counts: typing.MutableMapping[bytes, int]
-	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]]]
+	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, Resource]]
 	
 	@classmethod
 	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str="auto", **kwargs: typing.Any) -> "ResourceFile":
@@ -453,7 +450,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 		self._references = collections.OrderedDict()
 		
 		for resource_type, count in self._reference_counts.items():
-			resmap: typing.MutableMapping[int, typing.Tuple[int, ResourceAttrs, int]] = collections.OrderedDict()
+			resmap: typing.MutableMapping[int, Resource] = collections.OrderedDict()
 			self._references[resource_type] = resmap
 			for _ in range(count):
 				(
@@ -465,7 +462,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 				attributes = attributes_and_data_offset >> 24
 				data_offset = attributes_and_data_offset & ((1 << 24) - 1)
 				
-				resmap[resource_id] = (name_offset, ResourceAttrs(attributes), data_offset)
+				resmap[resource_id] = Resource(self, resource_type, resource_id, name_offset, ResourceAttrs(attributes), data_offset)
 	
 	def close(self) -> None:
 		"""Close this ResourceFile.
@@ -506,7 +503,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	def __getitem__(self, key: bytes) -> "ResourceFile._LazyResourceMap":
 		"""Get a lazy mapping of all resources with the given type in this ResourceFile."""
 		
-		return ResourceFile._LazyResourceMap(self, key)
+		return ResourceFile._LazyResourceMap(self._references[key])
 	
 	def __repr__(self) -> str:
 		return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x}, attributes {self.file_attributes}, containing {len(self)} resource types: {list(self)}>"
