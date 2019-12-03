@@ -229,50 +229,49 @@ class Resource(object):
 		else:
 			return self.data_raw
 
+class _LazyResourceMap(typing.Mapping[int, Resource]):
+	"""Internal class: Read-only wrapper for a mapping of resource IDs to resource objects.
+	
+	This class behaves like a normal read-only mapping. The main difference to a plain dict (or similar mapping) is that this mapping has a specialized repr to avoid excessive output when working in the REPL.
+	"""
+	
+	_submap: typing.Mapping[int, Resource]
+	
+	def __init__(self, submap: typing.Mapping[int, Resource]) -> None:
+		"""Create a new _LazyResourceMap that wraps the given mapping."""
+		
+		super().__init__()
+		
+		self._submap = submap
+	
+	def __len__(self) -> int:
+		"""Get the number of resources with this type code."""
+		
+		return len(self._submap)
+	
+	def __iter__(self) -> typing.Iterator[int]:
+		"""Iterate over the IDs of all resources with this type code."""
+		
+		return iter(self._submap)
+	
+	def __contains__(self, key: object) -> bool:
+		"""Check if a resource with the given ID exists for this type code."""
+		
+		return key in self._submap
+	
+	def __getitem__(self, key: int) -> Resource:
+		"""Get a resource with the given ID for this type code."""
+		
+		return self._submap[key]
+	
+	def __repr__(self) -> str:
+		if len(self) == 1:
+			return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing one resource: {next(iter(self.values()))}>"
+		else:
+			return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing {len(self)} resources with IDs: {list(self)}>"
+
 class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.ContextManager["ResourceFile"]):
 	"""A resource file reader operating on a byte stream."""
-	
-	# noinspection PyProtectedMember
-	class _LazyResourceMap(typing.Mapping[int, Resource]):
-		"""Internal class: Read-only wrapper for a mapping of resource IDs to resource objects.
-		
-		This class behaves like a normal read-only mapping. The main difference to a plain dict (or similar mapping) is that this mapping has a specialized repr to avoid excessive output when working in the REPL.
-		"""
-		
-		_submap: typing.Mapping[int, Resource]
-		
-		def __init__(self, submap: typing.Mapping[int, Resource]) -> None:
-			"""Create a new _LazyResourceMap that wraps the given mapping."""
-			
-			super().__init__()
-			
-			self._submap = submap
-		
-		def __len__(self) -> int:
-			"""Get the number of resources with this type code."""
-			
-			return len(self._submap)
-		
-		def __iter__(self) -> typing.Iterator[int]:
-			"""Iterate over the IDs of all resources with this type code."""
-			
-			return iter(self._submap)
-		
-		def __contains__(self, key: object) -> bool:
-			"""Check if a resource with the given ID exists for this type code."""
-			
-			return key in self._submap
-		
-		def __getitem__(self, key: int) -> Resource:
-			"""Get a resource with the given ID for this type code."""
-			
-			return self._submap[key]
-		
-		def __repr__(self) -> str:
-			if len(self) == 1:
-				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing one resource: {next(iter(self.values()))}>"
-			else:
-				return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x} containing {len(self)} resources with IDs: {list(self)}>"
 	
 	_close_stream: bool
 	_stream: typing.BinaryIO
@@ -500,10 +499,10 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 		
 		return key in self._references
 	
-	def __getitem__(self, key: bytes) -> "ResourceFile._LazyResourceMap":
+	def __getitem__(self, key: bytes) -> "_LazyResourceMap":
 		"""Get a lazy mapping of all resources with the given type in this ResourceFile."""
 		
-		return ResourceFile._LazyResourceMap(self._references[key])
+		return _LazyResourceMap(self._references[key])
 	
 	def __repr__(self) -> str:
 		return f"<{type(self).__module__}.{type(self).__qualname__} at {id(self):#x}, attributes {self.file_attributes}, containing {len(self)} resource types: {list(self)}>"
