@@ -97,24 +97,31 @@ class ResourceAttrs(enum.Flag):
 class Resource(object):
 	"""A single resource from a resource file."""
 	
+	_resfile: "ResourceFile"
 	type: bytes
 	id: int
-	name: typing.Optional[bytes]
+	name_offset: int
+	_name: typing.Optional[bytes]
 	attributes: ResourceAttrs
-	data_raw: bytes
+	data_raw_offset: int
+	_data_raw: bytes
 	_compressed_info: compress.common.CompressedHeaderInfo
 	_data_decompressed: bytes
 	
-	def __init__(self, resource_type: bytes, resource_id: int, name: typing.Optional[bytes], attributes: ResourceAttrs, data_raw: bytes) -> None:
-		"""Create a new resource with the given type code, ID, name, attributes, and data."""
+	def __init__(self, resfile: "ResourceFile", resource_type: bytes, resource_id: int, name_offset: int, attributes: ResourceAttrs, data_raw_offset: int) -> None:
+		"""Create a resource object representing a resource stored in a resource file.
+		
+		External code should not call this constructor manually. Resources should be looked up through a ResourceFile object instead.
+		"""
 		
 		super().__init__()
 		
+		self._resfile = resfile
 		self.type = resource_type
 		self.id = resource_id
-		self.name = name
+		self.name_offset = name_offset
 		self.attributes = attributes
-		self.data_raw = data_raw
+		self.data_raw_offset = data_raw_offset
 	
 	def __repr__(self) -> str:
 		try:
@@ -144,6 +151,30 @@ class Resource(object):
 	def resource_id(self) -> int:
 		warnings.warn(DeprecationWarning("The resource_id attribute has been deprecated and will be removed in a future version. Please use the id attribute instead."))
 		return self.id
+	
+	@property
+	def name(self) -> typing.Optional[bytes]:
+		try:
+			return self._name
+		except AttributeError:
+			if self.name_offset == 0xffff:
+				self._name = None
+			else:
+				self._resfile._stream.seek(self._resfile.map_offset + self._resfile.map_name_list_offset + self.name_offset)
+				(name_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_NAME_HEADER)
+				self._name = self._resfile._read_exact(name_length)
+			
+			return self._name
+	
+	@property
+	def data_raw(self) -> bytes:
+		try:
+			return self._data_raw
+		except AttributeError:
+			self._resfile._stream.seek(self._resfile.data_offset + self.data_raw_offset)
+			(data_raw_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
+			self._data_raw = self._resfile._read_exact(data_raw_length)
+			return self._data_raw
 	
 	@property
 	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
@@ -238,18 +269,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 			
 			name_offset, attributes, data_offset = self._submap[key]
 			
-			if name_offset == 0xffff:
-				name = None
-			else:
-				self._resfile._stream.seek(self._resfile.map_offset + self._resfile.map_name_list_offset + name_offset)
-				(name_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_NAME_HEADER)
-				name = self._resfile._read_exact(name_length)
-			
-			self._resfile._stream.seek(self._resfile.data_offset + data_offset)
-			(data_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
-			data = self._resfile._read_exact(data_length)
-			
-			return Resource(self._restype, key, name, attributes, data)
+			return Resource(self._resfile, self._restype, key, name_offset, attributes, data_offset)
 		
 		def __repr__(self) -> str:
 			if len(self) == 1:
