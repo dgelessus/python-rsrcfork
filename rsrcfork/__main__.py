@@ -685,12 +685,73 @@ def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 		
 		show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 
+def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Decompress raw compressed resource data."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+		Decompress raw compressed resource data that is stored in a standalone file
+		and not as a resource in a resource file.
+		
+		This subcommand can be used in a shell pipeline by passing - as the input and
+		output file name, i. e. "%(prog)s - -".
+		
+		Note: All other rsrcfork subcommands natively support compressed resources and
+		will automatically decompress them as needed. This subcommand is only needed
+		to decompress resource data that has been read from a resource file in
+		compressed form (e. g. using --no-decompress or another tool that does not
+		handle resource compression).
+		""",
+	)
+	
+	ap.add_argument("--debug", action="store_true", help="Display debugging output from the decompressor on stdout. Cannot be used if the output file is - (stdout).")
+	
+	ap.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
+	ap.add_argument("output_file", help="The file to which to write the decompressed resource data, or - for stdout.")
+	
+	ns = ap.parse_args(args)
+	
+	if ns.input_file == "-":
+		in_stream = sys.stdin.buffer
+		close_in_stream = False
+	else:
+		in_stream = open(ns.input_file, "rb")
+		close_in_stream = True
+	
+	try:
+		header_info = compress.CompressedHeaderInfo.parse_stream(in_stream)
+		
+		# Open the output file only after parsing the header, so that the file is only created (or its existing contents deleted) if the input file is valid.
+		if ns.output_file == "-":
+			if ns.debug:
+				print("Cannot use --debug if the decompression output file is - (stdout).", file=sys.stderr)
+				print("The debug output goes to stdout and would conflict with the decompressed data.", file=sys.stderr)
+				sys.exit(2)
+			
+			out_stream = sys.stdout.buffer
+			close_out_stream = False
+		else:
+			out_stream = open(ns.output_file, "wb")
+			close_out_stream = True
+		
+		try:
+			for chunk in compress.decompress_stream_parsed(header_info, in_stream, debug=ns.debug):
+				out_stream.write(chunk)
+		finally:
+			if close_out_stream:
+				out_stream.close()
+	finally:
+		if close_in_stream:
+			in_stream.close()
+
 
 SUBCOMMANDS = {
 	"read-header": do_read_header,
 	"info": do_info,
 	"list": do_list,
 	"read": do_read,
+	"raw-decompress": do_raw_decompress,
 }
 
 
