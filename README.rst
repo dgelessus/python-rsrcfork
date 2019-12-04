@@ -113,8 +113,8 @@ For technical info and documentation about resource files and resources, see the
 Changelog
 ---------
 
-Version 1.5.1 (next version)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version 1.6.0
+^^^^^^^^^^^^^
 
 * Added a new subcommand-based command-line syntax to the ``rsrcfork`` tool, similar to other CLI tools such as ``git`` or ``diskutil``.
 
