@@ -668,7 +668,7 @@ def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources: human-readable info with hex dump (dump), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez). Default: %(default)s")
 	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
 	add_resource_file_args(ap)
-	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to read. If no filters ae specified, all resources are read.")
+	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to read. If no filters are specified, all resources are read.")
 	
 	ns = ap.parse_args(args)
 	
