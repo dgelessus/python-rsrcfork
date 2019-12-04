@@ -119,7 +119,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 					print(f"\t-> segment number: {segment_number_int:#x}")
 				
 				# The tail part of all jump table entries (i. e. everything except for the address).
-				entry_tail = b"?<" + segment_number_int.to_bytes(2, "big", signed=True) + b"\xa9\xf0"
+				entry_tail = b"?<" + segment_number_int.to_bytes(2, "big", signed=False) + b"\xa9\xf0"
 				# The tail is output once *without* an address in front, i. e. the first entry's address must be generated manually by a previous code.
 				yield entry_tail
 				

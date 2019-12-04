@@ -121,6 +121,7 @@ Version 1.6.1 (next version)
 
   * The same optimization applies to the ``name`` attribute, although this is unlikely to make a difference in practice.
   * As a result, it is no longer possible to construct ``Resource`` objects without a resource file. This was previously possible, but had no practical use.
+* Fixed a small error in the ``'dcmp' (0)`` decompression implementation.
 
 Version 1.6.0
 ^^^^^^^^^^^^^
