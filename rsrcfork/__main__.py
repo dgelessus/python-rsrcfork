@@ -483,7 +483,7 @@ def make_argument_parser(*, description: str, **kwargs: typing.Any) -> argparse.
 	
 	ap = argparse.ArgumentParser(
 		formatter_class=argparse.RawDescriptionHelpFormatter,
-		description=textwrap.dedent(description),
+		description=description,
 		allow_abbrev=False,
 		add_help=False,
 		**kwargs,
@@ -521,21 +521,21 @@ def do_read_header(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap = make_argument_parser(
 		prog=prog,
 		description="""
-		Read and output a resource file's header data.
-		
-		The header data consists of two parts:
-		
-		The system-reserved data is 112 bytes long and used by the Classic Mac OS
-		Finder as temporary storage space. It usually contains parts of the
-		file metadata (name, type/creator code, etc.).
-		
-		The application-specific data is 128 bytes long and is available for use by
-		applications. In practice it usually contains junk data that happened to be in
-		memory when the resource file was written.
-		
-		Mac OS X does not use the header data fields anymore. Resource files written
-		on Mac OS X normally have both parts of the header data set to all zero bytes.
-		""",
+Read and output a resource file's header data.
+
+The header data consists of two parts:
+
+The system-reserved data is 112 bytes long and used by the Classic Mac OS
+Finder as temporary storage space. It usually contains parts of the
+file metadata (name, type/creator code, etc.).
+
+The application-specific data is 128 bytes long and is available for use by
+applications. In practice it usually contains junk data that happened to be in
+memory when the resource file was written.
+
+Mac OS X does not use the header data fields anymore. Resource files written
+on Mac OS X normally have both parts of the header data set to all zero bytes.
+""",
 	)
 	
 	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw"], default="dump", help="How to output the header data: human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), or data only as raw bytes (raw). Default: %(default)s")
@@ -586,8 +586,8 @@ def do_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap = make_argument_parser(
 		prog=prog,
 		description="""
-		Display technical information and stats about the resource file.
-		""",
+Display technical information and stats about the resource file.
+""",
 	)
 	add_resource_file_args(ap)
 	
@@ -618,16 +618,16 @@ def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap = make_argument_parser(
 		prog=prog,
 		description="""
-		List the resources stored in a resource file.
-		
-		Each resource's type, ID, name (if any), attributes (if any), and data length
-		are displayed. For compressed resources, the compressed and decompressed data
-		length are displayed, as well as the ID of the 'dcmp' resource used to
-		decompress the resource data.
-		
-		If the resource file has any global (resource map) attributes or non-zero
-		header data, they are displayed before the list of resources.
-		""",
+List the resources stored in a resource file.
+
+Each resource's type, ID, name (if any), attributes (if any), and data length
+are displayed. For compressed resources, the compressed and decompressed data
+length are displayed, as well as the ID of the 'dcmp' resource used to
+decompress the resource data.
+
+If the resource file has any global (resource map) attributes or non-zero
+header data, they are displayed before the list of resources.
+""",
 	)
 	
 	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the data header of compressed resources and only output their compressed length.")
@@ -646,22 +646,22 @@ def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap = make_argument_parser(
 		prog=prog,
 		description="""
-		Read the data of one or more resources.
-		
-		The resource filters use syntax similar to Rez (resource definition) files.
-		Each filter can have one of the following forms:
-		
-		An unquoted type name (without escapes): TYPE
-		A quoted type name: 'TYPE'
-		A quoted type name and an ID: 'TYPE' (42)
-		A quoted type name and an ID range: 'TYPE' (24:42)
-		A quoted type name and a resource name: 'TYPE' ("foobar")
-		
-		Note that the resource filter syntax uses quotes, parentheses and spaces,
-		which have special meanings in most shells. It is recommended to quote each
-		resource filter (using double quotes) to ensure that it is not interpreted
-		or rewritten by the shell.
-		""",
+Read the data of one or more resources.
+
+The resource filters use syntax similar to Rez (resource definition) files.
+Each filter can have one of the following forms:
+
+An unquoted type name (without escapes): TYPE
+A quoted type name: 'TYPE'
+A quoted type name and an ID: 'TYPE' (42)
+A quoted type name and an ID range: 'TYPE' (24:42)
+A quoted type name and a resource name: 'TYPE' ("foobar")
+
+Note that the resource filter syntax uses quotes, parentheses and spaces,
+which have special meanings in most shells. It is recommended to quote each
+resource filter (using double quotes) to ensure that it is not interpreted
+or rewritten by the shell.
+""",
 	)
 	
 	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output the raw compressed resource data.")
@@ -691,18 +691,18 @@ def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	ap = make_argument_parser(
 		prog=prog,
 		description="""
-		Decompress raw compressed resource data that is stored in a standalone file
-		and not as a resource in a resource file.
-		
-		This subcommand can be used in a shell pipeline by passing - as the input and
-		output file name, i. e. "%(prog)s - -".
-		
-		Note: All other rsrcfork subcommands natively support compressed resources and
-		will automatically decompress them as needed. This subcommand is only needed
-		to decompress resource data that has been read from a resource file in
-		compressed form (e. g. using --no-decompress or another tool that does not
-		handle resource compression).
-		""",
+Decompress raw compressed resource data that is stored in a standalone file
+and not as a resource in a resource file.
+
+This subcommand can be used in a shell pipeline by passing - as the input and
+output file name, i. e. "%(prog)s - -".
+
+Note: All other rsrcfork subcommands natively support compressed resources and
+will automatically decompress them as needed. This subcommand is only needed
+to decompress resource data that has been read from a resource file in
+compressed form (e. g. using --no-decompress or another tool that does not
+handle resource compression).
+""",
 	)
 	
 	ap.add_argument("--debug", action="store_true", help="Display debugging output from the decompressor on stdout. Cannot be used if the output file is - (stdout).")
@@ -804,16 +804,16 @@ def main() -> typing.NoReturn:
 		# Custom usage string to make "subcommand ..." show up in the usage, but not as "positional arguments" in the main help text.
 		usage=f"{prog} (--help | --version | subcommand ...)",
 		description="""
-		%(prog)s is a tool for working with Classic Mac OS resource files.
-		Currently this tool can only read resource files; modifying/writing resource
-		files is not supported yet.
-		
-		Note: This tool is intended for human users. The output format is not
-		machine-readable and may change at any time. The command-line syntax usually
-		does not change much across versions, but this should not be relied on.
-		Automated scripts and programs should use the Python API provided by the
-		rsrcfork library, which this tool is a part of.
-		""",
+%(prog)s is a tool for working with Classic Mac OS resource files.
+Currently this tool can only read resource files; modifying/writing resource
+files is not supported yet.
+
+Note: This tool is intended for human users. The output format is not
+machine-readable and may change at any time. The command-line syntax usually
+does not change much across versions, but this should not be relied on.
+Automated scripts and programs should use the Python API provided by the
+rsrcfork library, which this tool is a part of.
+""",
 		# The list of subcommands is shown in the epilog so that it appears under the list of optional arguments.
 		epilog=format_subcommands_help(),
 	)
