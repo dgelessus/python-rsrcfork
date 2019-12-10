@@ -624,9 +624,6 @@ Each resource's type, ID, name (if any), attributes (if any), and data length
 are displayed. For compressed resources, the compressed and decompressed data
 length are displayed, as well as the ID of the 'dcmp' resource used to
 decompress the resource data.
-
-If the resource file has any global (resource map) attributes or non-zero
-header data, they are displayed before the list of resources.
 """,
 	)
 	
