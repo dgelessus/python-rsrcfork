@@ -84,6 +84,12 @@ def bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
 	return "".join(out)
 
 def filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.List[api.Resource]:
+	if not filters:
+		resources = []
+		for reses in rf.values():
+			resources.extend(reses.values())
+		return resources
+	
 	matching: typing.MutableMapping[typing.Tuple[bytes, int], api.Resource] = collections.OrderedDict()
 	
 	for filter in filters:
@@ -550,12 +556,7 @@ or rewritten by the shell.
 	ns = ap.parse_args(args)
 	
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
-		if ns.filter:
-			resources = filter_resources(rf, ns.filter)
-		else:
-			resources = []
-			for reses in rf.values():
-				resources.extend(reses.values())
+		resources = filter_resources(rf, ns.filter)
 		
 		if ns.sort:
 			resources.sort(key=lambda res: (res.type, res.id))
