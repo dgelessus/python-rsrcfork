@@ -116,7 +116,7 @@ Changelog
 Version 1.7.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* (no changes yet)
+* Removed the old (non-subcommand-based) CLI syntax.
 
 Version 1.7.0
 ^^^^^^^^^^^^^
