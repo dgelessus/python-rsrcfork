@@ -118,8 +118,8 @@ Version 1.7.1 (next version)
 
 * (no changes yet)
 
-Version 1.7
-^^^^^^^^^^^
+Version 1.7.0
+^^^^^^^^^^^^^
 
 * Added a ``raw-decompress`` subcommand to decompress compressed resource data stored in a standalone file rather than as a resource.
 * Optimized lazy loading of ``Resource`` objects. Previously, resource data would be read from disk whenever a ``Resource`` object was looked up, even if the data itself is never used. Now the resource data is only loaded once the ``data`` (or ``data_raw``) attribute is accessed.
