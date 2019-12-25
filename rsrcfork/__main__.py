@@ -320,46 +320,39 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 		else:
 			raise ValueError(f"Unhandled output format: {format}")
 
-def list_resource_file(rf: api.ResourceFile, *, sort: bool, group: str, decompress: bool) -> None:
-	if len(rf) == 0:
-		print("No resources (empty resource file)")
+def list_resources(resources: typing.List[api.Resource], *, sort: bool, group: str, decompress: bool) -> None:
+	if len(resources) == 0:
+		print("No resources matched the filter")
 		return
 	
 	if group == "none":
-		all_resources: typing.List[api.Resource] = []
-		for reses in rf.values():
-			all_resources.extend(reses.values())
 		if sort:
-			all_resources.sort(key=lambda res: (res.type, res.id))
-		print(f"{len(all_resources)} resources:")
-		for res in all_resources:
+			resources.sort(key=lambda res: (res.type, res.id))
+		print(f"{len(resources)} resources:")
+		for res in resources:
 			print(describe_resource(res, include_type=True, decompress=decompress))
 	elif group == "type":
-		print(f"{len(rf)} resource types:")
-		restype_items: typing.Collection[typing.Tuple[bytes, typing.Mapping[int, api.Resource]]] = rf.items()
 		if sort:
-			restype_items = sorted(restype_items, key=lambda item: item[0])
-		for typecode, resources_map in restype_items:
-			restype = bytes_escape(typecode, quote="'")
-			print(f"'{restype}': {len(resources_map)} resources:")
-			resources_items: typing.Collection[typing.Tuple[int, api.Resource]] = resources_map.items()
+			resources.sort(key=lambda res: res.type)
+		resources_by_type = {restype: list(reses) for restype, reses in itertools.groupby(resources, key=lambda res: res.type)}
+		print(f"{len(resources_by_type)} resource types:")
+		for restype, restype_resources in resources_by_type.items():
+			escaped_restype = bytes_escape(restype, quote="'")
+			print(f"'{escaped_restype}': {len(restype_resources)} resources:")
 			if sort:
-				resources_items = sorted(resources_items, key=lambda item: item[0])
-			for resid, res in resources_items:
+				restype_resources.sort(key=lambda res: res.id)
+			for res in restype_resources:
 				print(describe_resource(res, include_type=False, decompress=decompress))
 			print()
 	elif group == "id":
-		all_resources = []
-		for reses in rf.values():
-			all_resources.extend(reses.values())
-		all_resources.sort(key=lambda res: res.id)
-		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(all_resources, key=lambda res: res.id)}
+		resources.sort(key=lambda res: res.id)
+		resources_by_id = {resid: list(reses) for resid, reses in itertools.groupby(resources, key=lambda res: res.id)}
 		print(f"{len(resources_by_id)} resource IDs:")
-		for resid, resources in resources_by_id.items():
-			print(f"({resid}): {len(resources)} resources:")
+		for resid, resid_resources in resources_by_id.items():
+			print(f"({resid}): {len(resid_resources)} resources:")
 			if sort:
-				resources.sort(key=lambda res: res.type)
-			for res in resources:
+				resid_resources.sort(key=lambda res: res.type)
+			for res in resid_resources:
 				print(describe_resource(res, include_type=True, decompress=decompress))
 			print()
 	else:
@@ -392,6 +385,27 @@ def add_resource_file_args(ap: argparse.ArgumentParser) -> None:
 	
 	ap.add_argument("--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource file data, or auto to guess. Default: %(default)s")
 	ap.add_argument("file", help="The file from which to read resources, or - for stdin.")
+
+RESOURCE_FILTER_HELP = """
+The resource filters use syntax similar to Rez (resource definition) files.
+Each filter can have one of the following forms:
+
+An unquoted type name (without escapes): TYPE
+A quoted type name: 'TYPE'
+A quoted type name and an ID: 'TYPE' (42)
+A quoted type name and an ID range: 'TYPE' (24:42)
+A quoted type name and a resource name: 'TYPE' ("foobar")
+
+Note that the resource filter syntax uses quotes, parentheses and spaces,
+which have special meanings in most shells. It is recommended to quote each
+resource filter (using double quotes) to ensure that it is not interpreted
+or rewritten by the shell.
+"""
+
+def add_resource_filter_args(ap: argparse.ArgumentParser) -> None:
+	"""Define common options/arguments for specifying resource filters."""
+	
+	ap.add_argument("filter", nargs="*", help="One or more filters to select resources. If no filters are specified, all resources are selected.")
 
 def open_resource_file(file: str, *, fork: str = None) -> api.ResourceFile:
 	"""Open a resource file at the given path, using the specified fork."""
@@ -508,13 +522,15 @@ def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	
 	ap = make_argument_parser(
 		prog=prog,
-		description="""
+		description=f"""
 List the resources stored in a resource file.
 
 Each resource's type, ID, name (if any), attributes (if any), and data length
 are displayed. For compressed resources, the compressed and decompressed data
 length are displayed, as well as the ID of the 'dcmp' resource used to
 decompress the resource data.
+
+{RESOURCE_FILTER_HELP}
 """,
 	)
 	
@@ -522,33 +538,26 @@ decompress the resource data.
 	ap.add_argument("--group", action="store", choices=["none", "type", "id"], default="type", help="Group resources by type or ID, or disable grouping. Default: %(default)s")
 	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
 	add_resource_file_args(ap)
+	add_resource_filter_args(ap)
 	
 	ns = ap.parse_args(args)
 	
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
-		list_resource_file(rf, sort=ns.sort, group=ns.group, decompress=ns.decompress)
-	
+		if not rf:
+			print("No resources (empty resource file)")
+		else:
+			resources = list(filter_resources(rf, ns.filter))
+			list_resources(resources, sort=ns.sort, group=ns.group, decompress=ns.decompress)
+
 def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Read data from resources."""
 	
 	ap = make_argument_parser(
 		prog=prog,
-		description="""
+		description=f"""
 Read the data of one or more resources.
 
-The resource filters use syntax similar to Rez (resource definition) files.
-Each filter can have one of the following forms:
-
-An unquoted type name (without escapes): TYPE
-A quoted type name: 'TYPE'
-A quoted type name and an ID: 'TYPE' (42)
-A quoted type name and an ID range: 'TYPE' (24:42)
-A quoted type name and a resource name: 'TYPE' ("foobar")
-
-Note that the resource filter syntax uses quotes, parentheses and spaces,
-which have special meanings in most shells. It is recommended to quote each
-resource filter (using double quotes) to ensure that it is not interpreted
-or rewritten by the shell.
+{RESOURCE_FILTER_HELP}
 """,
 	)
 	
@@ -556,7 +565,7 @@ or rewritten by the shell.
 	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources: human-readable info with hex dump (dump), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez). Default: %(default)s")
 	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
 	add_resource_file_args(ap)
-	ap.add_argument("filter", nargs="*", help="One or more filters to select which resources to read. If no filters are specified, all resources are read.")
+	add_resource_filter_args(ap)
 	
 	ns = ap.parse_args(args)
 	

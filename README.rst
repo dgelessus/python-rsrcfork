@@ -117,6 +117,7 @@ Version 1.7.1 (next version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Removed the old (non-subcommand-based) CLI syntax.
+* Added filtering support to the ``list`` subcommand.
 
 Version 1.7.0
 ^^^^^^^^^^^^^
