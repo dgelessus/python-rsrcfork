@@ -577,6 +577,47 @@ Read the data of one or more resources.
 		
 		show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 
+def do_raw_compress_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Display technical information about raw compressed resource data."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description="""
+Display technical information about raw compressed resource data that is stored
+in a standalone file and not as a resource in a resource file.
+""",
+	)
+	
+	ap.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
+	
+	ns = ap.parse_args(args)
+	
+	if ns.input_file == "-":
+		in_stream = sys.stdin.buffer
+		close_in_stream = False
+	else:
+		in_stream = open(ns.input_file, "rb")
+		close_in_stream = True
+	
+	try:
+		header_info = compress.CompressedHeaderInfo.parse_stream(in_stream)
+		
+		print(f"Header length: {header_info.header_length} bytes")
+		print(f"Compression type: 0x{header_info.compression_type:>04x}")
+		print(f"Decompressed data length: {header_info.decompressed_length} bytes")
+		print(f"'dcmp' resource ID: {header_info.dcmp_id}")
+		
+		if isinstance(header_info, compress.CompressedType8HeaderInfo):
+			print(f"Working buffer fractional size: {header_info.working_buffer_fractional_size} 256ths of compressed data length")
+			print(f"Expansion buffer size: {header_info.expansion_buffer_size} bytes")
+		elif isinstance(header_info, compress.CompressedType9HeaderInfo):
+			print(f"Decompressor-specific parameters: {header_info.parameters}")
+		else:
+			raise AssertionError(f"Unhandled compressed header info type: {type(header_info)}")
+	finally:
+		if close_in_stream:
+			in_stream.close()
+
 def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Decompress raw compressed resource data."""
 	
@@ -643,6 +684,7 @@ SUBCOMMANDS = {
 	"info": do_info,
 	"list": do_list,
 	"read": do_read,
+	"raw-compress-info": do_raw_compress_info,
 	"raw-decompress": do_raw_decompress,
 }
 

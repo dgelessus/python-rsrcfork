@@ -5,10 +5,12 @@ from . import dcmp0
 from . import dcmp1
 from . import dcmp2
 
-from .common import DecompressError, CompressedHeaderInfo
+from .common import DecompressError, CompressedHeaderInfo, CompressedType8HeaderInfo, CompressedType9HeaderInfo
 
 __all__ = [
 	"CompressedHeaderInfo",
+	"CompressedType8HeaderInfo",
+	"CompressedType9HeaderInfo",
 	"DecompressError",
 	"decompress",
 	"decompress_parsed",
