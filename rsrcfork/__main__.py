@@ -216,7 +216,6 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 			assert res.compressed_info is not None
 			length_desc = f"{res.length} bytes ({res.length_raw} bytes compressed, 'dcmp' ({res.compressed_info.dcmp_id}) format)"
 	else:
-		assert res.compressed_info is None
 		length_desc = f"{res.length_raw} bytes"
 	content_desc_parts.append(length_desc)
 	

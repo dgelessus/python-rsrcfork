@@ -119,6 +119,7 @@ Version 1.7.1 (next version)
 * Removed the old (non-subcommand-based) CLI syntax.
 * Added filtering support to the ``list`` subcommand.
 * Added a ``raw-compress-info`` subcommand to display technical header information about standalone compressed resource data.
+* Fixed an incorrect ``AssertionError`` when using the ``--no-decompress`` command-line options.
 
 Version 1.7.0
 ^^^^^^^^^^^^^
