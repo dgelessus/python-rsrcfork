@@ -214,7 +214,7 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 			length_desc = f"unparseable compressed data header ({res.length_raw} bytes compressed)"
 		else:
 			assert res.compressed_info is not None
-			length_desc = f"{res.length} bytes ({res.length_raw} bytes compressed, 'dcmp' ({res.compressed_info.dcmp_id}) format)"
+			length_desc = f"{res.length} bytes ({res.length_raw} bytes compressed)"
 	else:
 		length_desc = f"{res.length_raw} bytes"
 	content_desc_parts.append(length_desc)
@@ -356,6 +356,20 @@ def list_resources(resources: typing.List[api.Resource], *, sort: bool, group: s
 			print()
 	else:
 		raise AssertionError(f"Unhandled group mode: {group!r}")
+
+def format_compressed_header_info(header_info: compress.CompressedHeaderInfo) -> typing.Iterable[str]:
+	yield f"Header length: {header_info.header_length} bytes"
+	yield f"Compression type: 0x{header_info.compression_type:>04x}"
+	yield f"Decompressed data length: {header_info.decompressed_length} bytes"
+	yield f"'dcmp' resource ID: {header_info.dcmp_id}"
+	
+	if isinstance(header_info, compress.CompressedType8HeaderInfo):
+		yield f"Working buffer fractional size: {header_info.working_buffer_fractional_size} 256ths of compressed data length"
+		yield f"Expansion buffer size: {header_info.expansion_buffer_size} bytes"
+	elif isinstance(header_info, compress.CompressedType9HeaderInfo):
+		yield f"Decompressor-specific parameters: {header_info.parameters}"
+	else:
+		raise AssertionError(f"Unhandled compressed header info type: {type(header_info)}")
 
 
 def make_argument_parser(*, description: str, **kwargs: typing.Any) -> argparse.ArgumentParser:
@@ -548,6 +562,68 @@ decompress the resource data.
 			resources = list(filter_resources(rf, ns.filter))
 			list_resources(resources, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 
+def do_resource_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
+	"""Display technical information about resources."""
+	
+	ap = make_argument_parser(
+		prog=prog,
+		description=f"""
+Display technical information about one or more resources.
+
+{RESOURCE_FILTER_HELP}
+""",
+	)
+	
+	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the contents of compressed resources, only output regular resource information.")
+	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap)
+	add_resource_filter_args(ap)
+	
+	ns = ap.parse_args(args)
+	
+	with open_resource_file(ns.file, fork=ns.fork) as rf:
+		resources = list(filter_resources(rf, ns.filter))
+		
+		if ns.sort:
+			resources.sort(key=lambda res: (res.type, res.id))
+		
+		if not resources:
+			print("No resources matched the filter")
+			return
+		
+		for res in resources:
+			restype = bytes_escape(res.type, quote="'")
+			print(f"Resource '{restype}' ({res.id}):")
+			
+			if res.name is None:
+				print("\tName: none (unnamed)")
+			else:
+				assert res.name_offset is not None
+				name = bytes_escape(res.name, quote='"')
+				print(f'\tName: "{name}" (at offset {res.name_offset} in name list)')
+			
+			attrs = decompose_flags(res.attributes)
+			if attrs:
+				attrs_desc = " | ".join(attr.name for attr in attrs)
+			else:
+				attrs_desc = "(none)"
+			print(f"\tAttributes: {attrs_desc}")
+			
+			print(f"\tData: {res.length_raw} bytes stored at offset {res.data_raw_offset} in resource file data")
+			
+			if api.ResourceAttrs.resCompressed in res.attributes and ns.decompress:
+				print()
+				print("\tCompressed resource header info:")
+				try:
+					res.compressed_info
+				except compress.DecompressError:
+					print("\t\t(failed to parse compressed resource header)")
+				else:
+					for line in format_compressed_header_info(res.compressed_info):
+						print(f"\t\t{line}")
+			
+			print()
+
 def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Read data from resources."""
 	
@@ -599,20 +675,8 @@ in a standalone file and not as a resource in a resource file.
 		close_in_stream = True
 	
 	try:
-		header_info = compress.CompressedHeaderInfo.parse_stream(in_stream)
-		
-		print(f"Header length: {header_info.header_length} bytes")
-		print(f"Compression type: 0x{header_info.compression_type:>04x}")
-		print(f"Decompressed data length: {header_info.decompressed_length} bytes")
-		print(f"'dcmp' resource ID: {header_info.dcmp_id}")
-		
-		if isinstance(header_info, compress.CompressedType8HeaderInfo):
-			print(f"Working buffer fractional size: {header_info.working_buffer_fractional_size} 256ths of compressed data length")
-			print(f"Expansion buffer size: {header_info.expansion_buffer_size} bytes")
-		elif isinstance(header_info, compress.CompressedType9HeaderInfo):
-			print(f"Decompressor-specific parameters: {header_info.parameters}")
-		else:
-			raise AssertionError(f"Unhandled compressed header info type: {type(header_info)}")
+		for line in format_compressed_header_info(compress.CompressedHeaderInfo.parse_stream(in_stream)):
+			print(line)
 	finally:
 		if close_in_stream:
 			in_stream.close()
@@ -682,6 +746,7 @@ SUBCOMMANDS = {
 	"read-header": do_read_header,
 	"info": do_info,
 	"list": do_list,
+	"resource-info": do_resource_info,
 	"read": do_read,
 	"raw-compress-info": do_raw_compress_info,
 	"raw-decompress": do_raw_decompress,
