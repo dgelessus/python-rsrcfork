@@ -165,7 +165,8 @@ def make_peekable(stream: typing.BinaryIO) -> "PeekableIO":
 	if hasattr(stream, "peek"):
 		# Stream is already peekable, nothing to be done.
 		return typing.cast("PeekableIO", stream)
-	elif isinstance(stream, io.RawIOBase):
+	elif not typing.TYPE_CHECKING and isinstance(stream, io.RawIOBase):
+		# This branch is skipped when type checking - mypy incorrectly warns about this code being unreachable, because it thinks that a typing.BinaryIO cannot be an instance of io.RawIOBase.
 		# Raw IO streams can be wrapped efficiently using BufferedReader.
 		return io.BufferedReader(stream)
 	else:

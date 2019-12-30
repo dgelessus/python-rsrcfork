@@ -420,7 +420,7 @@ def add_resource_filter_args(ap: argparse.ArgumentParser) -> None:
 	
 	ap.add_argument("filter", nargs="*", help="One or more filters to select resources. If no filters are specified, all resources are selected.")
 
-def open_resource_file(file: str, *, fork: str = None) -> api.ResourceFile:
+def open_resource_file(file: str, *, fork: str) -> api.ResourceFile:
 	"""Open a resource file at the given path, using the specified fork."""
 	
 	if file == "-":
@@ -467,8 +467,8 @@ on Mac OS X normally have both parts of the header data set to all zero bytes.
 			if ns.format == "dump":
 				dump_func = hexdump
 			elif ns.format == "dump-text":
-				def dump_func(d):
-					print(translate_text(d))
+				def dump_func(data: bytes) -> None:
+					print(translate_text(data))
 			else:
 				raise AssertionError(f"Unhandled --format: {ns.format!r}")
 			
@@ -619,6 +619,7 @@ Display technical information about one or more resources.
 				except compress.DecompressError:
 					print("\t\t(failed to parse compressed resource header)")
 				else:
+					assert res.compressed_info is not None
 					for line in format_compressed_header_info(res.compressed_info):
 						print(f"\t\t{line}")
 			
