@@ -2,6 +2,9 @@
 *.py[co]
 __pycache__/
 
+# tox
+.tox/
+
 # setuptools
 *.egg-info/
 build/
