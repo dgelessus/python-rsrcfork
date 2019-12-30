@@ -55,6 +55,7 @@ class ResourceFileReadTests(unittest.TestCase):
 					for (actual_id, actual_res), (expected_id, expected_data) in zip(actual_reses.items(), expected_reses.items()):
 						with self.subTest(id=expected_id):
 							self.assertEqual(actual_res.type, expected_type)
+							self.assertEqual(actual_id, expected_id)
 							self.assertEqual(actual_res.id, expected_id)
 							self.assertEqual(actual_res.name, None)
 							for attr in rsrcfork.ResourceAttrs:
