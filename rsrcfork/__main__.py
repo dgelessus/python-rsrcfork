@@ -367,7 +367,7 @@ def format_compressed_header_info(header_info: compress.CompressedHeaderInfo) ->
 		yield f"Working buffer fractional size: {header_info.working_buffer_fractional_size} 256ths of compressed data length"
 		yield f"Expansion buffer size: {header_info.expansion_buffer_size} bytes"
 	elif isinstance(header_info, compress.CompressedType9HeaderInfo):
-		yield f"Decompressor-specific parameters: {header_info.parameters}"
+		yield f"Decompressor-specific parameters: {header_info.parameters!r}"
 	else:
 		raise AssertionError(f"Unhandled compressed header info type: {type(header_info)}")
 

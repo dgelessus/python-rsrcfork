@@ -83,14 +83,14 @@ def _decompress_untagged(stream: "common.PeekableIO", decompressed_length: int, 
 		elif not stream.peek(1) and decompressed_length % 2 != 0:
 			# Special case: if we are at the last byte of the compressed data, and the decompressed data has an odd length, the last byte is a single literal byte, and not a table reference.
 			if debug:
-				print(f"Last byte: {table_index_data}")
+				print(f"Last byte: {table_index_data!r}")
 			yield table_index_data
 			break
 		
 		# Compressed data is untagged, every byte is a table reference.
 		(table_index,) = table_index_data
 		if debug:
-			print(f"Reference: {table_index} -> {table[table_index]}")
+			print(f"Reference: {table_index} -> {table[table_index]!r}")
 		yield table[table_index]
 
 def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool=False) -> typing.Iterator[bytes]:
@@ -102,7 +102,7 @@ def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, ta
 		elif not stream.peek(1) and decompressed_length % 2 != 0:
 			# Special case: if we are at the last byte of the compressed data, and the decompressed data has an odd length, the last byte is a single literal byte, and not a tag or a table reference.
 			if debug:
-				print(f"Last byte: {tag_data}")
+				print(f"Last byte: {tag_data!r}")
 			yield tag_data
 			break
 		
@@ -119,7 +119,7 @@ def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, ta
 					break
 				(table_index,) = table_index_data
 				if debug:
-					print(f"Reference: {table_index} -> {table[table_index]}")
+					print(f"Reference: {table_index} -> {table[table_index]!r}")
 				yield table[table_index]
 			else:
 				# This is a literal (two uncompressed bytes that are literally copied into the output).
@@ -129,7 +129,7 @@ def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, ta
 					break
 				# Note: the literal may be only a single byte long if it is located exactly at EOF. This is intended and expected - the 1-byte literal is yielded normally, and on the next iteration, decompression is terminated as EOF is detected.
 				if debug:
-					print(f"Literal: {literal}")
+					print(f"Literal: {literal!r}")
 				yield literal
 
 

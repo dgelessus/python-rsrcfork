@@ -133,14 +133,14 @@ class Resource(object):
 			decompress_ok = True
 		
 		if len(data) > 32:
-			data_repr = f"<{len(data)} bytes: {data[:32]}...>"
+			data_repr = f"<{len(data)} bytes: {data[:32]!r}...>"
 		else:
 			data_repr = repr(data)
 		
 		if not decompress_ok:
 			data_repr = f"<decompression failed - compressed data: {data_repr}>"
 		
-		return f"<{type(self).__qualname__} type {self.type}, id {self.id}, name {self.name}, attributes {self.attributes}, data {data_repr}>"
+		return f"<{type(self).__qualname__} type {self.type!r}, id {self.id}, name {self.name!r}, attributes {self.attributes}, data {data_repr}>"
 	
 	@property
 	def resource_type(self) -> bytes:
@@ -272,7 +272,7 @@ class _LazyResourceMap(typing.Mapping[int, Resource]):
 		else:
 			contents = f"{len(self)} resources with IDs {list(self)}"
 		
-		return f"<Resource map for type {self.type}, containing {contents}>"
+		return f"<Resource map for type {self.type!r}, containing {contents}>"
 
 class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.ContextManager["ResourceFile"]):
 	"""A resource file reader operating on a byte stream."""

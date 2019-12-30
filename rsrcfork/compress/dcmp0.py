@@ -169,7 +169,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 					raise common.DecompressError(f"Repeat count must be positive: {count}")
 				
 				if debug:
-					print(f"\t-> {to_repeat} * {count}")
+					print(f"\t-> {to_repeat!r} * {count}")
 				yield to_repeat * count
 			elif kind == 0x04:
 				# A sequence of 16-bit signed integers, with each integer encoded as a difference relative to the previous integer. The first integer is stored explicitly.
@@ -243,7 +243,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 			# Check that there really is no more data left.
 			extra = stream.read(1)
 			if extra:
-				raise common.DecompressError(f"Extra data encountered after end of data marker (first extra byte: {extra})")
+				raise common.DecompressError(f"Extra data encountered after end of data marker (first extra byte: {extra!r})")
 			break
 		else:
 			raise common.DecompressError(f"Unknown tag byte: 0x{byte:>02x}")
@@ -254,7 +254,7 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 	decompressed_length = 0
 	for chunk in decompress_stream_inner(header_info, stream, debug=debug):
 		if debug:
-			print(f"\t-> {chunk}")
+			print(f"\t-> {chunk!r}")
 		
 		if header_info.decompressed_length % 2 != 0 and decompressed_length + len(chunk) == header_info.decompressed_length + 1:
 			# Special case: if the decompressed data length stored in the header is odd and one less than the length of the actual decompressed data, drop the last byte.

@@ -112,7 +112,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 					raise common.DecompressError(f"Repeat count must be positive: {count}")
 				
 				if debug:
-					print(f"\t-> {to_repeat} * {count}")
+					print(f"\t-> {to_repeat!r} * {count}")
 				yield to_repeat * count
 			else:
 				raise common.DecompressError(f"Unknown extended code: 0x{kind:>02x}")
@@ -124,7 +124,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 			# Check that there really is no more data left.
 			extra = stream.read(1)
 			if extra:
-				raise common.DecompressError(f"Extra data encountered after end of data marker (first extra byte: {extra})")
+				raise common.DecompressError(f"Extra data encountered after end of data marker (first extra byte: {extra!r})")
 			break
 		else:
 			raise common.DecompressError(f"Unknown tag byte: 0x{byte:>02x}")
@@ -135,7 +135,7 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 	decompressed_length = 0
 	for chunk in decompress_stream_inner(header_info, stream, debug=debug):
 		if debug:
-			print(f"\t-> {chunk}")
+			print(f"\t-> {chunk!r}")
 		
 		decompressed_length += len(chunk)
 		yield chunk

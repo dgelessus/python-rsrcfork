@@ -43,7 +43,7 @@ class CompressedHeaderInfo(object):
 		except struct.error:
 			raise DecompressError(f"Invalid header")
 		if signature != COMPRESSED_SIGNATURE:
-			raise DecompressError(f"Invalid signature: {signature!r}, expected {COMPRESSED_SIGNATURE}")
+			raise DecompressError(f"Invalid signature: {signature!r}, expected {COMPRESSED_SIGNATURE!r}")
 		if header_length != 0x12:
 			raise DecompressError(f"Unsupported header length: 0x{header_length:>04x}, expected 0x12")
 		
