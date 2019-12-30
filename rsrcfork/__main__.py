@@ -497,6 +497,8 @@ on Mac OS X normally have both parts of the header data set to all zero bytes.
 				raise AssertionError(f"Unhandled --format: {ns.format!r}")
 		else:
 			raise AssertionError(f"Unhandled --format: {ns.format!r}")
+	
+	sys.exit(0)
 
 def do_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about the resource file."""
@@ -529,6 +531,8 @@ Display technical information and stats about the resource file.
 		print(f"Resource map attributes: {attrs_desc}")
 		print(f"Resource map type list starts at {rf.map_type_list_offset:#x} (relative to map start) and contains {len(rf)} types")
 		print(f"Resource map name list starts at {rf.map_name_list_offset:#x} (relative to map start)")
+	
+	sys.exit(0)
 
 def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""List the resources in a file."""
@@ -561,6 +565,8 @@ decompress the resource data.
 		else:
 			resources = list(filter_resources(rf, ns.filter))
 			list_resources(resources, sort=ns.sort, group=ns.group, decompress=ns.decompress)
+	
+	sys.exit(0)
 
 def do_resource_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about resources."""
@@ -589,7 +595,7 @@ Display technical information about one or more resources.
 		
 		if not resources:
 			print("No resources matched the filter")
-			return
+			sys.exit(0)
 		
 		for res in resources:
 			restype = bytes_escape(res.type, quote="'")
@@ -624,6 +630,8 @@ Display technical information about one or more resources.
 						print(f"\t\t{line}")
 			
 			print()
+	
+	sys.exit(0)
 
 def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Read data from resources."""
@@ -652,6 +660,8 @@ Read the data of one or more resources.
 			resources.sort(key=lambda res: (res.type, res.id))
 		
 		show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
+	
+	sys.exit(0)
 
 def do_raw_compress_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about raw compressed resource data."""
@@ -681,6 +691,8 @@ in a standalone file and not as a resource in a resource file.
 	finally:
 		if close_in_stream:
 			in_stream.close()
+	
+	sys.exit(0)
 
 def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Decompress raw compressed resource data."""
@@ -741,6 +753,8 @@ handle resource compression).
 	finally:
 		if close_in_stream:
 			in_stream.close()
+	
+	sys.exit(0)
 
 
 SUBCOMMANDS = {
