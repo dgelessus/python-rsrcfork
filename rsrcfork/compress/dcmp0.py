@@ -1,4 +1,3 @@
-import io
 import typing
 
 from . import common
@@ -39,7 +38,7 @@ TABLE = [TABLE_DATA[i:i + 2] for i in range(0, len(TABLE_DATA), 2)]
 assert len(TABLE) == len(range(0x4b, 0xfe))
 
 
-def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool = False) -> typing.Iterator[bytes]:
 	"""Internal helper function, implements the main decompression algorithm. Only called from decompress_stream, which performs some extra checks and debug logging."""
 	
 	if not isinstance(header_info, common.CompressedType8HeaderInfo):
@@ -248,9 +247,10 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 		else:
 			raise common.DecompressError(f"Unknown tag byte: 0x{byte:>02x}")
 
-def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+
+def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool = False) -> typing.Iterator[bytes]:
 	"""Decompress compressed data in the format used by 'dcmp' (0)."""
-		
+	
 	decompressed_length = 0
 	for chunk in decompress_stream_inner(header_info, stream, debug=debug):
 		if debug:

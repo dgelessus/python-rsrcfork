@@ -62,5 +62,6 @@ class ResourceFileReadTests(unittest.TestCase):
 							self.assertEqual(actual_res.data, expected_data)
 							self.assertEqual(actual_res.compressed_info, None)
 
+
 if __name__ == "__main__":
 	unittest.main()

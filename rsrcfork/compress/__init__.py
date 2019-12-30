@@ -28,7 +28,7 @@ DECOMPRESSORS = {
 }
 
 
-def decompress_stream_parsed(header_info: CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+def decompress_stream_parsed(header_info: CompressedHeaderInfo, stream: typing.BinaryIO, *, debug: bool = False) -> typing.Iterator[bytes]:
 	"""Decompress compressed resource data from a stream, whose header has already been read and parsed into a CompressedHeaderInfo object."""
 	
 	try:
@@ -44,12 +44,14 @@ def decompress_stream_parsed(header_info: CompressedHeaderInfo, stream: typing.B
 	if decompressed_length != header_info.decompressed_length:
 		raise DecompressError(f"Actual length of decompressed data ({decompressed_length}) does not match length stored in resource ({header_info.decompressed_length})")
 
-def decompress_parsed(header_info: CompressedHeaderInfo, data: bytes, *, debug: bool=False) -> bytes:
+
+def decompress_parsed(header_info: CompressedHeaderInfo, data: bytes, *, debug: bool = False) -> bytes:
 	"""Decompress the given compressed resource data, whose header has already been removed and parsed into a CompressedHeaderInfo object."""
 	
 	return b"".join(decompress_stream_parsed(header_info, io.BytesIO(data), debug=debug))
 
-def decompress_stream(stream: typing.BinaryIO, *, debug: bool=False) -> typing.Iterator[bytes]:
+
+def decompress_stream(stream: typing.BinaryIO, *, debug: bool = False) -> typing.Iterator[bytes]:
 	"""Decompress compressed resource data from a stream."""
 	
 	header_info = CompressedHeaderInfo.parse_stream(stream)
@@ -59,7 +61,8 @@ def decompress_stream(stream: typing.BinaryIO, *, debug: bool=False) -> typing.I
 	
 	yield from decompress_stream_parsed(header_info, stream, debug=debug)
 
-def decompress(data: bytes, *, debug: bool=False) -> bytes:
+
+def decompress(data: bytes, *, debug: bool = False) -> bytes:
 	"""Decompress the given compressed resource data."""
 	
 	return b"".join(decompress_stream(io.BytesIO(data), debug=debug))

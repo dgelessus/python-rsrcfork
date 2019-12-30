@@ -59,8 +59,10 @@ STRUCT_RESOURCE_REFERENCE = struct.Struct(">hHI4x")
 # 1 byte: Length of following resource name.
 STRUCT_RESOURCE_NAME_HEADER = struct.Struct(">B")
 
+
 class InvalidResourceFileError(Exception):
 	pass
+
 
 class ResourceFileAttrs(enum.Flag):
 	"""Resource file attribute flags. The descriptions for these flags are taken from comments on the map*Bit and map* enum constants in <CarbonCore/Resources.h>."""
@@ -82,6 +84,7 @@ class ResourceFileAttrs(enum.Flag):
 	_BIT_1 = 1 << 1
 	_BIT_0 = 1 << 0
 
+
 class ResourceAttrs(enum.Flag):
 	"""Resource attribute flags. The descriptions for these flags are taken from comments on the res*Bit and res* enum constants in <CarbonCore/Resources.h>."""
 	
@@ -93,6 +96,7 @@ class ResourceAttrs(enum.Flag):
 	resPreload = 1 << 2 # "Read in at OpenResource?", "Load in on OpenResFile?"
 	resChanged = 1 << 1 # "Existing resource changed since last update", "Resource changed?"
 	resCompressed = 1 << 0 # "indicates that the resource data is compressed" (only documented in https://github.com/kreativekorp/ksfl/wiki/Macintosh-Resource-File-Format)
+
 
 class Resource(object):
 	"""A single resource from a resource file."""
@@ -229,6 +233,7 @@ class Resource(object):
 		else:
 			return self.data_raw
 
+
 class _LazyResourceMap(typing.Mapping[int, Resource]):
 	"""Internal class: Read-only wrapper for a mapping of resource IDs to resource objects.
 	
@@ -274,6 +279,7 @@ class _LazyResourceMap(typing.Mapping[int, Resource]):
 		
 		return f"<Resource map for type {self.type!r}, containing {contents}>"
 
+
 class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.ContextManager["ResourceFile"]):
 	"""A resource file reader operating on a byte stream."""
 	
@@ -295,7 +301,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	_references: typing.MutableMapping[bytes, typing.MutableMapping[int, Resource]]
 	
 	@classmethod
-	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str="auto", **kwargs: typing.Any) -> "ResourceFile":
+	def open(cls, filename: typing.Union[str, os.PathLike], *, fork: str = "auto", **kwargs: typing.Any) -> "ResourceFile":
 		"""Open the file at the given path as a ResourceFile.
 		
 		The fork parameter controls which fork of the file the resource data will be read from. It accepts the following values:
@@ -354,7 +360,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 		else:
 			raise ValueError(f"Unsupported value for the fork parameter: {fork!r}")
 	
-	def __init__(self, stream: typing.BinaryIO, *, close: bool=False) -> None:
+	def __init__(self, stream: typing.BinaryIO, *, close: bool = False) -> None:
 		"""Create a ResourceFile wrapping the given byte stream.
 		
 		To read resource file data from a bytes object, wrap it in an io.BytesIO.

@@ -31,8 +31,8 @@ __all__ = [
 	"open",
 ]
 
-from . import api, compress
 from .api import Resource, ResourceAttrs, ResourceFile, ResourceFileAttrs
+from . import compress
 
 # noinspection PyShadowingBuiltins
 open = ResourceFile.open

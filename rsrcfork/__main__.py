@@ -1,5 +1,4 @@
 import argparse
-import collections
 import enum
 import itertools
 import pathlib
@@ -27,10 +26,13 @@ _REZ_ATTR_NAMES = {
 }
 
 F = typing.TypeVar("F", bound=enum.Flag)
+
+
 def decompose_flags(value: F) -> typing.Sequence[F]:
 	"""Decompose an enum.Flags instance into separate enum constants."""
 	
 	return [bit for bit in type(value) if bit in value]
+
 
 def is_printable(char: str) -> bool:
 	"""Determine whether a character is printable for our purposes.
@@ -39,6 +41,7 @@ def is_printable(char: str) -> bool:
 	"""
 	
 	return char.isprintable() or char == "\uf8ff"
+
 
 def bytes_unescape(string: str) -> bytes:
 	"""Convert a string containing text (in _TEXT_ENCODING) and hex escapes to a bytestring.
@@ -66,7 +69,8 @@ def bytes_unescape(string: str) -> bytes:
 	
 	return bytes(out)
 
-def bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
+
+def bytes_escape(bs: bytes, *, quote: typing.Optional[str] = None) -> str:
 	"""Convert a bytestring to a string (using _TEXT_ENCODING), with non-printable characters hex-escaped.
 	
 	(We implement our own escaping mechanism here to not depend on Python's str or bytes repr.)
@@ -83,8 +87,10 @@ def bytes_escape(bs: bytes, *, quote: typing.Optional[str]=None) -> str:
 	
 	return "".join(out)
 
+
 MIN_RESOURCE_ID = -0x8000
 MAX_RESOURCE_ID = 0x7fff
+
 
 class ResourceFilter(object):
 	type: bytes
@@ -154,6 +160,7 @@ class ResourceFilter(object):
 	def matches(self, res: api.Resource) -> bool:
 		return res.type == self.type and self.min_id <= res.id <= self.max_id and (self.name is None or res.name == self.name)
 
+
 def filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typing.Iterable[api.Resource]:
 	if not filters:
 		# Special case: an empty list of filters matches all resources rather than none
@@ -166,6 +173,7 @@ def filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typ
 			for res in reses.values():
 				if any(filter_obj.matches(res) for filter_obj in filter_objs):
 					yield res
+
 
 def hexdump(data: bytes) -> None:
 	last_line = None
@@ -189,12 +197,15 @@ def hexdump(data: bytes) -> None:
 	if data:
 		print(f"{len(data):08x}")
 
+
 def raw_hexdump(data: bytes) -> None:
 	for i in range(0, len(data), 16):
 		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
 
+
 def translate_text(data: bytes) -> str:
 	return data.decode(_TEXT_ENCODING).replace("\r", "\n")
+
 
 def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool) -> str:
 	id_desc_parts = [f"{res.id}"]
@@ -230,6 +241,7 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 		restype = bytes_escape(res.type, quote="'")
 		desc = f"'{restype}' {desc}"
 	return desc
+
 
 def show_filtered_resources(resources: typing.Sequence[api.Resource], format: str, decompress: bool) -> None:
 	if not resources:
@@ -319,6 +331,7 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 		else:
 			raise ValueError(f"Unhandled output format: {format}")
 
+
 def list_resources(resources: typing.List[api.Resource], *, sort: bool, group: str, decompress: bool) -> None:
 	if len(resources) == 0:
 		print("No resources matched the filter")
@@ -357,6 +370,7 @@ def list_resources(resources: typing.List[api.Resource], *, sort: bool, group: s
 	else:
 		raise AssertionError(f"Unhandled group mode: {group!r}")
 
+
 def format_compressed_header_info(header_info: compress.CompressedHeaderInfo) -> typing.Iterable[str]:
 	yield f"Header length: {header_info.header_length} bytes"
 	yield f"Compression type: 0x{header_info.compression_type:>04x}"
@@ -390,6 +404,7 @@ def make_argument_parser(*, description: str, **kwargs: typing.Any) -> argparse.
 	
 	return ap
 
+
 def add_resource_file_args(ap: argparse.ArgumentParser) -> None:
 	"""Define common options/arguments for specifying an input resource file.
 	
@@ -398,6 +413,7 @@ def add_resource_file_args(ap: argparse.ArgumentParser) -> None:
 	
 	ap.add_argument("--fork", choices=["auto", "data", "rsrc"], default="auto", help="The fork from which to read the resource file data, or auto to guess. Default: %(default)s")
 	ap.add_argument("file", help="The file from which to read resources, or - for stdin.")
+
 
 RESOURCE_FILTER_HELP = """
 The resource filters use syntax similar to Rez (resource definition) files.
@@ -415,10 +431,12 @@ resource filter (using double quotes) to ensure that it is not interpreted
 or rewritten by the shell.
 """
 
+
 def add_resource_filter_args(ap: argparse.ArgumentParser) -> None:
 	"""Define common options/arguments for specifying resource filters."""
 	
 	ap.add_argument("filter", nargs="*", help="One or more filters to select resources. If no filters are specified, all resources are selected.")
+
 
 def open_resource_file(file: str, *, fork: str) -> api.ResourceFile:
 	"""Open a resource file at the given path, using the specified fork."""
@@ -500,6 +518,7 @@ on Mac OS X normally have both parts of the header data set to all zero bytes.
 	
 	sys.exit(0)
 
+
 def do_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about the resource file."""
 	
@@ -534,6 +553,7 @@ Display technical information and stats about the resource file.
 	
 	sys.exit(0)
 
+
 def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""List the resources in a file."""
 	
@@ -567,6 +587,7 @@ decompress the resource data.
 			list_resources(resources, sort=ns.sort, group=ns.group, decompress=ns.decompress)
 	
 	sys.exit(0)
+
 
 def do_resource_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about resources."""
@@ -633,6 +654,7 @@ Display technical information about one or more resources.
 	
 	sys.exit(0)
 
+
 def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Read data from resources."""
 	
@@ -662,6 +684,7 @@ Read the data of one or more resources.
 		show_filtered_resources(resources, format=ns.format, decompress=ns.decompress)
 	
 	sys.exit(0)
+
 
 def do_raw_compress_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Display technical information about raw compressed resource data."""
@@ -693,6 +716,7 @@ in a standalone file and not as a resource in a resource file.
 			in_stream.close()
 	
 	sys.exit(0)
+
 
 def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
 	"""Decompress raw compressed resource data."""
@@ -855,6 +879,7 @@ rsrcfork library, which this tool is a part of.
 	else:
 		# Subcommand is valid, call the looked up subcommand and pass on further arguments.
 		subcommand_func(f"{prog} {ns.subcommand}", ns.args)
+
 
 if __name__ == "__main__":
 	sys.exit(main())

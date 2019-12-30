@@ -112,9 +112,14 @@ if typing.TYPE_CHECKING:
 		The peek method is supported by various standard Python binary IO streams, such as io.BufferedReader. If a stream does not natively support the peek method, it may be wrapped using the custom helper function make_peekable.
 		"""
 		
-		def readable(self) -> bool: ...
-		def read(self, size: typing.Optional[int] = ...) -> bytes: ...
-		def peek(self, size: int = ...) -> bytes: ...
+		def readable(self) -> bool:
+			...
+		
+		def read(self, size: typing.Optional[int] = ...) -> bytes:
+			...
+		
+		def peek(self, size: int = ...) -> bytes:
+			...
 
 
 class _PeekableIOWrapper(object):
@@ -181,6 +186,7 @@ def read_exact(stream: typing.BinaryIO, byte_count: int) -> bytes:
 	if len(data) != byte_count:
 		raise DecompressError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
 	return data
+
 
 def read_variable_length_integer(stream: typing.BinaryIO) -> int:
 	"""Read a variable-length integer from the stream.
