@@ -10,6 +10,16 @@ EMPTY_RSRC_FILE = DATA_DIR / "empty.rsrc"
 TEXTCLIPPING_RSRC_FILE = DATA_DIR / "unicode.textClipping.rsrc"
 TESTFILE_RSRC_FILE = DATA_DIR / "testfile.rsrc"
 
+COMPRESS_DATA_DIR = DATA_DIR / "compress"
+COMPRESSED_DIR = COMPRESS_DATA_DIR / "compressed"
+UNCOMPRESSED_DIR = COMPRESS_DATA_DIR / "uncompressed"
+COMPRESS_RSRC_FILE_NAMES = [
+	"Finder.rsrc",
+	"Finder Help.rsrc",
+	# "Install.rsrc", # Commented out for performance - this file contains a lot of small resources.
+	"System.rsrc",
+]
+
 
 def make_pascal_string(s):
 	return bytes([len(s)]) + s
@@ -120,6 +130,48 @@ class ResourceFileReadTests(unittest.TestCase):
 							self.assertEqual(actual_res.attributes, expected_attrs)
 							self.assertEqual(actual_res.data, expected_data)
 							self.assertEqual(actual_res.compressed_info, None)
+	
+	def test_compress_compare(self) -> None:
+		# This test goes through pairs of resource files: one original file with both compressed and uncompressed resources, and one modified file where all compressed resources have been decompressed (using ResEdit on System 7.5.5).
+		# It checks that the rsrcfork library performs automatic decompression on the compressed resources, so that the compressed resource file appears to the user like the uncompressed resource file (ignoring resource order, which was lost during decompression using ResEdit).
+		
+		for name in COMPRESS_RSRC_FILE_NAMES:
+			with self.subTest(name=name):
+				with rsrcfork.open(COMPRESSED_DIR / name, fork="data") as compressed_rf, rsrcfork.open(UNCOMPRESSED_DIR / name, fork="data") as uncompressed_rf:
+					self.assertEqual(sorted(compressed_rf), sorted(uncompressed_rf))
+					
+					for (compressed_type, compressed_reses), (uncompressed_type, uncompressed_reses) in zip(sorted(compressed_rf.items()), sorted(uncompressed_rf.items())):
+						with self.subTest(type=compressed_type):
+							self.assertEqual(compressed_type, uncompressed_type)
+							self.assertEqual(sorted(compressed_reses), sorted(uncompressed_reses))
+							
+							for (compressed_id, compressed_res), (uncompressed_id, uncompressed_res) in zip(sorted(compressed_reses.items()), sorted(uncompressed_reses.items())):
+								with self.subTest(id=compressed_id):
+									# The metadata of the compressed and uncompressed resources must match.
+									self.assertEqual(compressed_res.type, uncompressed_res.type)
+									self.assertEqual(compressed_res.id, uncompressed_res.id)
+									self.assertEqual(compressed_res.name, uncompressed_res.name)
+									self.assertEqual(compressed_res.attributes & ~rsrcfork.ResourceAttrs.resCompressed, uncompressed_res.attributes)
+									
+									# The uncompressed resource really has to be not compressed.
+									self.assertNotIn(rsrcfork.ResourceAttrs.resCompressed, uncompressed_res.attributes)
+									self.assertEqual(uncompressed_res.compressed_info, None)
+									self.assertEqual(uncompressed_res.data, uncompressed_res.data_raw)
+									self.assertEqual(uncompressed_res.length, uncompressed_res.length_raw)
+									
+									# The compressed resource's (automatically decompressed) data must match the uncompressed data.
+									self.assertEqual(compressed_res.data, uncompressed_res.data)
+									self.assertEqual(compressed_res.length, uncompressed_res.length)
+									
+									if rsrcfork.ResourceAttrs.resCompressed in compressed_res.attributes:
+										# Resources with the compressed attribute must expose correct compression metadata.
+										self.assertNotEqual(compressed_res.compressed_info, None)
+										self.assertEqual(compressed_res.compressed_info.decompressed_length, compressed_res.length)
+									else:
+										# Some resources in the "compressed" files are not actually compressed, in which case there is no compression metadata.
+										self.assertEqual(compressed_res.compressed_info, None)
+										self.assertEqual(compressed_res.data, compressed_res.data_raw)
+										self.assertEqual(compressed_res.length, compressed_res.length_raw)
 
 
 if __name__ == "__main__":
