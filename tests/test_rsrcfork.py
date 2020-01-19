@@ -37,16 +37,14 @@ class ResourceFileReadTests(unittest.TestCase):
 		with rsrcfork.open(EMPTY_RSRC_FILE, fork="data") as rf:
 			self.assertEqual(rf.header_system_data, bytes(112))
 			self.assertEqual(rf.header_application_data, bytes(128))
-			for attr in rsrcfork.ResourceFileAttrs:
-				self.assertNotIn(attr, rf.file_attributes)
+			self.assertEqual(rf.file_attributes, rsrcfork.ResourceFileAttrs(0))
 			self.assertEqual(list(rf), [])
 	
 	def test_textclipping(self) -> None:
 		with rsrcfork.open(TEXTCLIPPING_RSRC_FILE, fork="data") as rf:
 			self.assertEqual(rf.header_system_data, bytes(112))
 			self.assertEqual(rf.header_application_data, bytes(128))
-			for attr in rsrcfork.ResourceFileAttrs:
-				self.assertNotIn(attr, rf.file_attributes)
+			self.assertEqual(rf.file_attributes, rsrcfork.ResourceFileAttrs(0))
 			self.assertEqual(list(rf), list(TEXTCLIPPING_RESOURCES))
 			
 			for (actual_type, actual_reses), (expected_type, expected_reses) in zip(rf.items(), TEXTCLIPPING_RESOURCES.items()):
@@ -60,8 +58,7 @@ class ResourceFileReadTests(unittest.TestCase):
 							self.assertEqual(actual_id, expected_id)
 							self.assertEqual(actual_res.id, expected_id)
 							self.assertEqual(actual_res.name, None)
-							for attr in rsrcfork.ResourceAttrs:
-								self.assertNotIn(attr, actual_res.attributes)
+							self.assertEqual(actual_res.attributes, rsrcfork.ResourceAttrs(0))
 							self.assertEqual(actual_res.data, expected_data)
 							self.assertEqual(actual_res.compressed_info, None)
 
