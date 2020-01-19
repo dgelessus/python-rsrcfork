@@ -149,6 +149,8 @@ class ResourceFileReadTests(unittest.TestCase):
 								with self.subTest(id=compressed_id):
 									# The metadata of the compressed and uncompressed resources must match.
 									self.assertEqual(compressed_res.type, uncompressed_res.type)
+									self.assertEqual(compressed_id, uncompressed_id)
+									self.assertEqual(compressed_res.id, compressed_id)
 									self.assertEqual(compressed_res.id, uncompressed_res.id)
 									self.assertEqual(compressed_res.name, uncompressed_res.name)
 									self.assertEqual(compressed_res.attributes & ~rsrcfork.ResourceAttrs.resCompressed, uncompressed_res.attributes)
