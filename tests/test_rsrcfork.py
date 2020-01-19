@@ -52,6 +52,8 @@ class ResourceFileReadTests(unittest.TestCase):
 			for (actual_type, actual_reses), (expected_type, expected_reses) in zip(rf.items(), TEXTCLIPPING_RESOURCES.items()):
 				with self.subTest(type=expected_type):
 					self.assertEqual(actual_type, expected_type)
+					self.assertEqual(list(actual_reses), list(expected_reses))
+					
 					for (actual_id, actual_res), (expected_id, expected_data) in zip(actual_reses.items(), expected_reses.items()):
 						with self.subTest(id=expected_id):
 							self.assertEqual(actual_res.type, expected_type)
