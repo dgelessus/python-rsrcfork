@@ -1,5 +1,7 @@
 import collections
+import io
 import pathlib
+import typing
 import unittest
 
 import rsrcfork
@@ -79,6 +81,18 @@ TESTFILE_RESOURCES = collections.OrderedDict([
 ])
 
 
+class UnseekableStreamWrapper(io.BufferedIOBase):
+	_wrapped: typing.BinaryIO
+	
+	def __init__(self, wrapped: typing.BinaryIO) -> None:
+		super().__init__()
+		
+		self._wrapped = wrapped
+	
+	def read(self, size: typing.Optional[int] = -1) -> bytes:
+		return self._wrapped.read(size)
+
+
 class ResourceFileReadTests(unittest.TestCase):
 	def test_empty(self) -> None:
 		with rsrcfork.open(EMPTY_RSRC_FILE, fork="data") as rf:
@@ -87,27 +101,41 @@ class ResourceFileReadTests(unittest.TestCase):
 			self.assertEqual(rf.file_attributes, rsrcfork.ResourceFileAttrs(0))
 			self.assertEqual(list(rf), [])
 	
-	def test_textclipping(self) -> None:
+	def internal_test_textclipping(self, rf: rsrcfork.ResourceFile) -> None:
+		self.assertEqual(rf.header_system_data, bytes(112))
+		self.assertEqual(rf.header_application_data, bytes(128))
+		self.assertEqual(rf.file_attributes, rsrcfork.ResourceFileAttrs(0))
+		self.assertEqual(list(rf), list(TEXTCLIPPING_RESOURCES))
+		
+		for (actual_type, actual_reses), (expected_type, expected_reses) in zip(rf.items(), TEXTCLIPPING_RESOURCES.items()):
+			with self.subTest(type=expected_type):
+				self.assertEqual(actual_type, expected_type)
+				self.assertEqual(list(actual_reses), list(expected_reses))
+				
+				for (actual_id, actual_res), (expected_id, expected_data) in zip(actual_reses.items(), expected_reses.items()):
+					with self.subTest(id=expected_id):
+						self.assertEqual(actual_res.type, expected_type)
+						self.assertEqual(actual_id, expected_id)
+						self.assertEqual(actual_res.id, expected_id)
+						self.assertEqual(actual_res.name, None)
+						self.assertEqual(actual_res.attributes, rsrcfork.ResourceAttrs(0))
+						self.assertEqual(actual_res.data, expected_data)
+						self.assertEqual(actual_res.compressed_info, None)
+	
+	def test_textclipping_seekable_stream(self) -> None:
+		with TEXTCLIPPING_RSRC_FILE.open("rb") as f:
+			with rsrcfork.ResourceFile(f) as rf:
+				self.internal_test_textclipping(rf)
+	
+	def test_textclipping_unseekable_stream(self) -> None:
+		with TEXTCLIPPING_RSRC_FILE.open("rb") as f:
+			with UnseekableStreamWrapper(f) as usf:
+				with rsrcfork.ResourceFile(usf) as rf:
+					self.internal_test_textclipping(rf)
+	
+	def test_textclipping_path_data_fork(self) -> None:
 		with rsrcfork.open(TEXTCLIPPING_RSRC_FILE, fork="data") as rf:
-			self.assertEqual(rf.header_system_data, bytes(112))
-			self.assertEqual(rf.header_application_data, bytes(128))
-			self.assertEqual(rf.file_attributes, rsrcfork.ResourceFileAttrs(0))
-			self.assertEqual(list(rf), list(TEXTCLIPPING_RESOURCES))
-			
-			for (actual_type, actual_reses), (expected_type, expected_reses) in zip(rf.items(), TEXTCLIPPING_RESOURCES.items()):
-				with self.subTest(type=expected_type):
-					self.assertEqual(actual_type, expected_type)
-					self.assertEqual(list(actual_reses), list(expected_reses))
-					
-					for (actual_id, actual_res), (expected_id, expected_data) in zip(actual_reses.items(), expected_reses.items()):
-						with self.subTest(id=expected_id):
-							self.assertEqual(actual_res.type, expected_type)
-							self.assertEqual(actual_id, expected_id)
-							self.assertEqual(actual_res.id, expected_id)
-							self.assertEqual(actual_res.name, None)
-							self.assertEqual(actual_res.attributes, rsrcfork.ResourceAttrs(0))
-							self.assertEqual(actual_res.data, expected_data)
-							self.assertEqual(actual_res.compressed_info, None)
+			self.internal_test_textclipping(rf)
 	
 	def test_testfile(self) -> None:
 		with rsrcfork.open(TESTFILE_RSRC_FILE, fork="data") as rf:
