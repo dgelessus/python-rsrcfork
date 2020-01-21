@@ -149,7 +149,6 @@ class ResourceFileReadTests(unittest.TestCase):
 	@unittest.skipUnless(RESOURCE_FORKS_SUPPORTED, RESOURCE_FORKS_NOT_SUPPORTED_MESSAGE)
 	def test_textclipping_path_resource_fork(self) -> None:
 		with tempfile.NamedTemporaryFile() as tempf:
-			# 
 			with TEXTCLIPPING_RSRC_FILE.open("rb") as dataf:
 				with open_resource_fork(pathlib.Path(tempf.name), "wb") as rsrcf:
 					shutil.copyfileobj(dataf, rsrcf)
