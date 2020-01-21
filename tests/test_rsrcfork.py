@@ -1,11 +1,16 @@
 import collections
 import io
 import pathlib
+import shutil
+import sys
+import tempfile
 import typing
 import unittest
 
 import rsrcfork
 
+RESOURCE_FORKS_SUPPORTED = sys.platform.startswith("darwin")
+RESOURCE_FORKS_NOT_SUPPORTED_MESSAGE = "Resource forks are only supported on Mac"
 
 DATA_DIR = pathlib.Path(__file__).parent / "data"
 EMPTY_RSRC_FILE = DATA_DIR / "empty.rsrc"
@@ -93,6 +98,10 @@ class UnseekableStreamWrapper(io.BufferedIOBase):
 		return self._wrapped.read(size)
 
 
+def open_resource_fork(path: pathlib.Path, mode: str) -> typing.BinaryIO:
+	return (path / "..namedfork" / "rsrc").open(mode)
+
+
 class ResourceFileReadTests(unittest.TestCase):
 	def test_empty(self) -> None:
 		with rsrcfork.open(EMPTY_RSRC_FILE, fork="data") as rf:
@@ -136,6 +145,80 @@ class ResourceFileReadTests(unittest.TestCase):
 	def test_textclipping_path_data_fork(self) -> None:
 		with rsrcfork.open(TEXTCLIPPING_RSRC_FILE, fork="data") as rf:
 			self.internal_test_textclipping(rf)
+	
+	@unittest.skipUnless(RESOURCE_FORKS_SUPPORTED, RESOURCE_FORKS_NOT_SUPPORTED_MESSAGE)
+	def test_textclipping_path_resource_fork(self) -> None:
+		with tempfile.NamedTemporaryFile() as tempf:
+			# 
+			with TEXTCLIPPING_RSRC_FILE.open("rb") as dataf:
+				with open_resource_fork(pathlib.Path(tempf.name), "wb") as rsrcf:
+					shutil.copyfileobj(dataf, rsrcf)
+			
+			with rsrcfork.open(tempf.name, fork="rsrc") as rf:
+				self.internal_test_textclipping(rf)
+	
+	@unittest.skipUnless(RESOURCE_FORKS_SUPPORTED, RESOURCE_FORKS_NOT_SUPPORTED_MESSAGE)
+	def test_textclipping_path_auto_resource_fork(self) -> None:
+		with tempfile.NamedTemporaryFile() as temp_data_fork:
+			with TEXTCLIPPING_RSRC_FILE.open("rb") as source_file:
+				with open_resource_fork(pathlib.Path(temp_data_fork.name), "wb") as temp_rsrc_fork:
+					shutil.copyfileobj(source_file, temp_rsrc_fork)
+			
+			with self.subTest(data_fork="empty"):
+				# Resource fork is selected when data fork is empty.
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
+			
+			with self.subTest(data_fork="non-resource data"):
+				# Resource fork is selected when data fork contains non-resource data.
+				
+				temp_data_fork.write(b"This is the file's data fork. It should not be read, as the file has a resource fork.")
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
+			
+			with self.subTest(data_fork="valid resource data"):
+				# Resource fork is selected even when data fork contains valid resource data.
+				
+				with EMPTY_RSRC_FILE.open("rb") as source_file:
+					shutil.copyfileobj(source_file, temp_data_fork)
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
+	
+	@unittest.skipUnless(RESOURCE_FORKS_SUPPORTED, RESOURCE_FORKS_NOT_SUPPORTED_MESSAGE)
+	def test_textclipping_path_auto_data_fork(self) -> None:
+		with tempfile.NamedTemporaryFile() as temp_data_fork:
+			with TEXTCLIPPING_RSRC_FILE.open("rb") as source_file:
+				shutil.copyfileobj(source_file, temp_data_fork)
+				# Have to flush the temporary file manually so that the data is visible to the other reads below.
+				# Normally this happens automatically as part of the close method, but that would also delete the temporary file, which we don't want.
+				temp_data_fork.flush()
+			
+			with self.subTest(rsrc_fork="nonexistant"):
+				# Data fork is selected when resource fork does not exist.
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
+			
+			with self.subTest(rsrc_fork="empty"):
+				# Data fork is selected when resource fork exists, but is empty.
+				
+				with open_resource_fork(pathlib.Path(temp_data_fork.name), "wb") as temp_rsrc_fork:
+					temp_rsrc_fork.write(b"")
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
+			
+			with self.subTest(rsrc_fork="non-resource data"):
+				# Data fork is selected when resource fork contains non-resource data.
+				
+				with open_resource_fork(pathlib.Path(temp_data_fork.name), "wb") as temp_rsrc_fork:
+					temp_rsrc_fork.write(b"This is the file's resource fork. It contains junk, so it should be ignored in favor of the data fork.")
+				
+				with rsrcfork.open(temp_data_fork.name) as rf:
+					self.internal_test_textclipping(rf)
 	
 	def test_testfile(self) -> None:
 		with rsrcfork.open(TESTFILE_RSRC_FILE, fork="data") as rf:
