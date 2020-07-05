@@ -386,21 +386,23 @@ def format_compressed_header_info(header_info: compress.CompressedHeaderInfo) ->
 		raise AssertionError(f"Unhandled compressed header info type: {type(header_info)}")
 
 
-def make_argument_parser(*, description: str, **kwargs: typing.Any) -> argparse.ArgumentParser:
-	"""Create an argparse.ArgumentParser with some slightly modified defaults.
+def make_subcommand_parser(subs: typing.Any, name: str, *, help: str, description: str, **kwargs: typing.Any) -> argparse.ArgumentParser:
+	"""Add a subcommand parser with some slightly modified defaults to a subcommand set.
 	
 	This function is used to ensure that all subcommands use the same base configuration for their ArgumentParser.
 	"""
 	
-	ap = argparse.ArgumentParser(
+	ap = subs.add_parser(
+		name,
 		formatter_class=argparse.RawDescriptionHelpFormatter,
+		help=help,
 		description=description,
 		allow_abbrev=False,
 		add_help=False,
 		**kwargs,
 	)
 	
-	ap.add_argument("--help", action="help", help="Display this help message and exit")
+	ap.add_argument("--help", action="help", help="Display this help message and exit.")
 	
 	return ap
 
@@ -451,35 +453,7 @@ def open_resource_file(file: str, *, fork: str) -> api.ResourceFile:
 		return api.ResourceFile.open(file, fork=fork)
 
 
-def do_read_header(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Read the header data from a resource file."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description="""
-Read and output a resource file's header data.
-
-The header data consists of two parts:
-
-The system-reserved data is 112 bytes long and used by the Classic Mac OS
-Finder as temporary storage space. It usually contains parts of the
-file metadata (name, type/creator code, etc.).
-
-The application-specific data is 128 bytes long and is available for use by
-applications. In practice it usually contains junk data that happened to be in
-memory when the resource file was written.
-
-Mac OS X does not use the header data fields anymore. Resource files written
-on Mac OS X normally have both parts of the header data set to all zero bytes.
-""",
-	)
-	
-	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw"], default="dump", help="How to output the header data: human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), or data only as raw bytes (raw). Default: %(default)s")
-	ap.add_argument("--part", choices=["system", "application", "all"], default="all", help="Which part of the header to read. Default: %(default)s")
-	add_resource_file_args(ap)
-	
-	ns = ap.parse_args(args)
-	
+def do_read_header(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		if ns.format in {"dump", "dump-text"}:
 			if ns.format == "dump":
@@ -519,19 +493,7 @@ on Mac OS X normally have both parts of the header data set to all zero bytes.
 	sys.exit(0)
 
 
-def do_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Display technical information about the resource file."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description="""
-Display technical information and stats about the resource file.
-""",
-	)
-	add_resource_file_args(ap)
-	
-	ns = ap.parse_args(args)
-	
+def do_info(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		print("System-reserved header data:")
 		hexdump(rf.header_system_data)
@@ -554,31 +516,7 @@ Display technical information and stats about the resource file.
 	sys.exit(0)
 
 
-def do_list(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""List the resources in a file."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description=f"""
-List the resources stored in a resource file.
-
-Each resource's type, ID, name (if any), attributes (if any), and data length
-are displayed. For compressed resources, the compressed and decompressed data
-length are displayed, as well as the ID of the 'dcmp' resource used to
-decompress the resource data.
-
-{RESOURCE_FILTER_HELP}
-""",
-	)
-	
-	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the data header of compressed resources and only output their compressed length.")
-	ap.add_argument("--group", action="store", choices=["none", "type", "id"], default="type", help="Group resources by type or ID, or disable grouping. Default: %(default)s")
-	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
-	add_resource_file_args(ap)
-	add_resource_filter_args(ap)
-	
-	ns = ap.parse_args(args)
-	
+def do_list(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		if not rf:
 			print("No resources (empty resource file)")
@@ -589,25 +527,7 @@ decompress the resource data.
 	sys.exit(0)
 
 
-def do_resource_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Display technical information about resources."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description=f"""
-Display technical information about one or more resources.
-
-{RESOURCE_FILTER_HELP}
-""",
-	)
-	
-	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the contents of compressed resources, only output regular resource information.")
-	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
-	add_resource_file_args(ap)
-	add_resource_filter_args(ap)
-	
-	ns = ap.parse_args(args)
-	
+def do_resource_info(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		resources = list(filter_resources(rf, ns.filter))
 		
@@ -655,26 +575,7 @@ Display technical information about one or more resources.
 	sys.exit(0)
 
 
-def do_read(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Read data from resources."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description=f"""
-Read the data of one or more resources.
-
-{RESOURCE_FILTER_HELP}
-""",
-	)
-	
-	ap.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output the raw compressed resource data.")
-	ap.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources: human-readable info with hex dump (dump), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez). Default: %(default)s")
-	ap.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
-	add_resource_file_args(ap)
-	add_resource_filter_args(ap)
-	
-	ns = ap.parse_args(args)
-	
+def do_read(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		resources = list(filter_resources(rf, ns.filter))
 		
@@ -686,21 +587,7 @@ Read the data of one or more resources.
 	sys.exit(0)
 
 
-def do_raw_compress_info(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Display technical information about raw compressed resource data."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description="""
-Display technical information about raw compressed resource data that is stored
-in a standalone file and not as a resource in a resource file.
-""",
-	)
-	
-	ap.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
-	
-	ns = ap.parse_args(args)
-	
+def do_raw_compress_info(ns: argparse.Namespace) -> typing.NoReturn:
 	if ns.input_file == "-":
 		in_stream = sys.stdin.buffer
 		close_in_stream = False
@@ -718,33 +605,7 @@ in a standalone file and not as a resource in a resource file.
 	sys.exit(0)
 
 
-def do_raw_decompress(prog: str, args: typing.List[str]) -> typing.NoReturn:
-	"""Decompress raw compressed resource data."""
-	
-	ap = make_argument_parser(
-		prog=prog,
-		description="""
-Decompress raw compressed resource data that is stored in a standalone file
-and not as a resource in a resource file.
-
-This subcommand can be used in a shell pipeline by passing - as the input and
-output file name, i. e. "%(prog)s - -".
-
-Note: All other rsrcfork subcommands natively support compressed resources and
-will automatically decompress them as needed. This subcommand is only needed
-to decompress resource data that has been read from a resource file in
-compressed form (e. g. using --no-decompress or another tool that does not
-handle resource compression).
-""",
-	)
-	
-	ap.add_argument("--debug", action="store_true", help="Display debugging output from the decompressor on stdout. Cannot be used if the output file is - (stdout).")
-	
-	ap.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
-	ap.add_argument("output_file", help="The file to which to write the decompressed resource data, or - for stdout.")
-	
-	ns = ap.parse_args(args)
-	
+def do_raw_decompress(ns: argparse.Namespace) -> typing.NoReturn:
 	if ns.input_file == "-":
 		in_stream = sys.stdin.buffer
 		close_in_stream = False
@@ -781,65 +642,13 @@ handle resource compression).
 	sys.exit(0)
 
 
-SUBCOMMANDS = {
-	"read-header": do_read_header,
-	"info": do_info,
-	"list": do_list,
-	"resource-info": do_resource_info,
-	"read": do_read,
-	"raw-compress-info": do_raw_compress_info,
-	"raw-decompress": do_raw_decompress,
-}
-
-
-def format_subcommands_help() -> str:
-	"""Return a formatted help text describing the availble subcommands.
-	
-	Because we do not use argparse's native support for subcommands (see comments in main function), the main ArgumentParser's help does not include any information about the subcommands by default, so we have to format and add it ourselves.
-	"""
-	
-	# The list of subcommands is formatted using a "fake" ArgumentParser, which is never actually used to parse any arguments.
-	# The options are chosen so that the help text will only include the subcommands list and epilog, but no usage or any other arguments.
-	fake_ap = argparse.ArgumentParser(
-		usage=argparse.SUPPRESS,
-		epilog=textwrap.dedent("""
-		Most of the above subcommands take additional arguments. Run a subcommand with
-		the option --help for help about the options understood by that subcommand.
-		"""),
-		add_help=False,
-		formatter_class=argparse.RawDescriptionHelpFormatter,
-	)
-	
-	# The subcommands are added as positional arguments to a custom group with the title "subcommands".
-	# Semantically this makes no sense, but it looks right in the formatted help text:
-	# the result is a section "subcommands" with an aligned list of command names and short descriptions.
-	fake_group = fake_ap.add_argument_group(title="subcommands")
-	
-	for name, func in SUBCOMMANDS.items():
-		# Each command's short description is taken from the implementation function's docstring.
-		fake_group.add_argument(name, help=func.__doc__)
-	
-	return fake_ap.format_help()
-
-
 def main() -> typing.NoReturn:
 	"""Main function of the CLI.
 	
 	This function is a valid setuptools entry point. Arguments are passed in sys.argv, and every execution path ends with a sys.exit call. (setuptools entry points are also permitted to return an integer, which will be treated as an exit code. We do not use this feature and instead always call sys.exit ourselves.)
 	"""
 	
-	prog = pathlib.PurePath(sys.argv[0]).name
-	args = sys.argv[1:]
-	
-	# The rsrcfork CLI is structured into subcommands, each implemented in a separate function.
-	# The main function parses the command-line arguments enough to determine which subcommand to call, but leaves parsing of the rest of the arguments to the subcommand itself.
-	# This should eventually be migrated to a standard CLI parsing library such as click or argh.
-	# (Previously this was not possible because of backwards compatibility with the old CLI syntax, but this has now been removed.)
-	
-	ap = make_argument_parser(
-		prog=prog,
-		# Custom usage string to make "subcommand ..." show up in the usage, but not as "positional arguments" in the main help text.
-		usage=f"{prog} (--help | --version | subcommand ...)",
+	ap = argparse.ArgumentParser(
 		description="""
 %(prog)s is a tool for working with Classic Mac OS resource files.
 Currently this tool can only read resource files; modifying/writing resource
@@ -851,34 +660,165 @@ does not change much across versions, but this should not be relied on.
 Automated scripts and programs should use the Python API provided by the
 rsrcfork library, which this tool is a part of.
 """,
-		# The list of subcommands is shown in the epilog so that it appears under the list of optional arguments.
-		epilog=format_subcommands_help(),
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+		allow_abbrev=False,
+		add_help=False,
 	)
 	
+	ap.add_argument("--help", action="help", help="Display this help message and exit.")
 	ap.add_argument("--version", action="version", version=__version__, help="Display version information and exit.")
 	
-	# The help of these arguments is set to argparse.SUPPRESS so that they do not cause a mostly useless "positional arguments" list to appear.
-	ap.add_argument("subcommand", help=argparse.SUPPRESS)
-	ap.add_argument("args", nargs=argparse.REMAINDER, help=argparse.SUPPRESS)
+	subs = ap.add_subparsers(
+		dest="subcommand",
+		required=True,
+		metavar="SUBCOMMAND",
+	)
 	
-	if not args:
-		print(f"{prog}: Missing subcommand.", file=sys.stderr)
-		ap.print_help()
-		sys.exit(2)
+	ap_read_header = make_subcommand_parser(
+		subs,
+		"read-header",
+		help="Read the header data from a resource file.",
+		description="""
+Read and output a resource file's header data.
+
+The header data consists of two parts:
+
+The system-reserved data is 112 bytes long and used by the Classic Mac OS
+Finder as temporary storage space. It usually contains parts of the
+file metadata (name, type/creator code, etc.).
+
+The application-specific data is 128 bytes long and is available for use by
+applications. In practice it usually contains junk data that happened to be in
+memory when the resource file was written.
+
+Mac OS X does not use the header data fields anymore. Resource files written
+on Mac OS X normally have both parts of the header data set to all zero bytes.
+""",
+	)
 	
-	ns = ap.parse_args(args)
+	ap_read_header.add_argument("--format", choices=["dump", "dump-text", "hex", "raw"], default="dump", help="How to output the header data: human-readable info with hex dump (dump) (default), human-readable info with newline-translated data (dump-text), data only as hex (hex), or data only as raw bytes (raw). Default: %(default)s")
+	ap_read_header.add_argument("--part", choices=["system", "application", "all"], default="all", help="Which part of the header to read. Default: %(default)s")
+	add_resource_file_args(ap_read_header)
 	
-	try:
-		# Check if the subcommand is valid.
-		subcommand_func = SUBCOMMANDS[ns.subcommand]
-	except KeyError:
-		# Subcommand is invalid, display an error.
-		print(f"{prog}: Unknown subcommand: {ns.subcommand}", file=sys.stderr)
-		print(f"Run {prog} --help for a list of available subcommands.", file=sys.stderr)
-		sys.exit(2)
+	ap_info = make_subcommand_parser(
+		subs,
+		"info",
+		help="Display technical information about the resource file.",
+		description="""
+Display technical information and stats about the resource file.
+""",
+	)
+	add_resource_file_args(ap_info)
+	
+	ap_list = make_subcommand_parser(
+		subs,
+		"list",
+		help="List the resources in a file.",
+		description=f"""
+List the resources stored in a resource file.
+
+Each resource's type, ID, name (if any), attributes (if any), and data length
+are displayed. For compressed resources, the compressed and decompressed data
+length are displayed, as well as the ID of the 'dcmp' resource used to
+decompress the resource data.
+
+{RESOURCE_FILTER_HELP}
+""",
+	)
+	
+	ap_list.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the data header of compressed resources and only output their compressed length.")
+	ap_list.add_argument("--group", action="store", choices=["none", "type", "id"], default="type", help="Group resources by type or ID, or disable grouping. Default: %(default)s")
+	ap_list.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap_list)
+	add_resource_filter_args(ap_list)
+	
+	ap_resource_info = make_subcommand_parser(
+		subs,
+		"resource-info",
+		help="Display technical information about resources.",
+		description=f"""
+Display technical information about one or more resources.
+
+{RESOURCE_FILTER_HELP}
+""",
+	)
+	
+	ap_resource_info.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not parse the contents of compressed resources, only output regular resource information.")
+	ap_resource_info.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap_resource_info)
+	add_resource_filter_args(ap_resource_info)
+	
+	ap_read = make_subcommand_parser(
+		subs,
+		"read",
+		help="Read data from resources.",
+		description=f"""
+Read the data of one or more resources.
+
+{RESOURCE_FILTER_HELP}
+""",
+	)
+	
+	ap_read.add_argument("--no-decompress", action="store_false", dest="decompress", help="Do not decompress compressed resources, output the raw compressed resource data.")
+	ap_read.add_argument("--format", choices=["dump", "dump-text", "hex", "raw", "derez"], default="dump", help="How to output the resources: human-readable info with hex dump (dump), human-readable info with newline-translated data (dump-text), data only as hex (hex), data only as raw bytes (raw), or like DeRez with no resource definitions (derez). Default: %(default)s")
+	ap_read.add_argument("--no-sort", action="store_false", dest="sort", help="Output resources in the order in which they are stored in the file, instead of sorting them by type and ID.")
+	add_resource_file_args(ap_read)
+	add_resource_filter_args(ap_read)
+	
+	ap_raw_compress_info = make_subcommand_parser(
+		subs,
+		"raw-compress-info",
+		help="Display technical information about raw compressed resource data.",
+		description="""
+Display technical information about raw compressed resource data that is stored
+in a standalone file and not as a resource in a resource file.
+""",
+	)
+	
+	ap_raw_compress_info.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
+	
+	ap_raw_decompress = make_subcommand_parser(
+		subs,
+		"raw-decompress",
+		help="Decompress raw compressed resource data.",
+		description="""
+Decompress raw compressed resource data that is stored in a standalone file
+and not as a resource in a resource file.
+
+This subcommand can be used in a shell pipeline by passing - as the input and
+output file name, i. e. "%(prog)s - -".
+
+Note: All other rsrcfork subcommands natively support compressed resources and
+will automatically decompress them as needed. This subcommand is only needed
+to decompress resource data that has been read from a resource file in
+compressed form (e. g. using --no-decompress or another tool that does not
+handle resource compression).
+""",
+	)
+	
+	ap_raw_decompress.add_argument("--debug", action="store_true", help="Display debugging output from the decompressor on stdout. Cannot be used if the output file is - (stdout).")
+	
+	ap_raw_decompress.add_argument("input_file", help="The file from which to read the compressed resource data, or - for stdin.")
+	ap_raw_decompress.add_argument("output_file", help="The file to which to write the decompressed resource data, or - for stdout.")
+	
+	ns = ap.parse_args()
+	
+	if ns.subcommand == "read-header":
+		do_read_header(ns)
+	elif ns.subcommand == "info":
+		do_info(ns)
+	elif ns.subcommand == "list":
+		do_list(ns)
+	elif ns.subcommand == "resource-info":
+		do_resource_info(ns)
+	elif ns.subcommand == "read":
+		do_read(ns)
+	elif ns.subcommand == "raw-compress-info":
+		do_raw_compress_info(ns)
+	elif ns.subcommand == "raw-decompress":
+		do_raw_decompress(ns)
 	else:
-		# Subcommand is valid, call the looked up subcommand and pass on further arguments.
-		subcommand_func(f"{prog} {ns.subcommand}", ns.args)
+		raise AssertionError(f"Subcommand not handled: {ns.subcommand!r}")
 
 
 if __name__ == "__main__":
