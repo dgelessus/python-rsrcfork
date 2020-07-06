@@ -120,6 +120,7 @@ Version 1.7.1 (next version)
 * Added filtering support to the ``list`` subcommand.
 * Added a ``resource-info`` subcommand to display technical information about resources (more detailed than what is displayed by ``list`` and ``read``).
 * Added a ``raw-compress-info`` subcommand to display technical header information about standalone compressed resource data.
+* Made the library PEP 561-compliant by adding a py.typed file.
 * Fixed an incorrect ``AssertionError`` when using the ``--no-decompress`` command-line options.
 
 Version 1.7.0
