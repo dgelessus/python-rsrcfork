@@ -671,7 +671,7 @@ rsrcfork library, which this tool is a part of.
 	
 	subs = ap.add_subparsers(
 		dest="subcommand",
-		required=True,
+		# TODO Add required=True (added in Python 3.7) once we drop Python 3.6 compatibility.
 		metavar="SUBCOMMAND",
 	)
 	
@@ -804,7 +804,11 @@ handle resource compression).
 	
 	ns = ap.parse_args()
 	
-	if ns.subcommand == "read-header":
+	if ns.subcommand is None:
+		# TODO Remove this branch once we drop Python 3.6 compatibility, because this case will be handled by passing required=True to add_subparsers (see above).
+		print("Missing subcommand", file=sys.stderr)
+		sys.exit(2)
+	elif ns.subcommand == "read-header":
 		do_read_header(ns)
 	elif ns.subcommand == "info":
 		do_info(ns)
