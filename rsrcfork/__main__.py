@@ -11,9 +11,6 @@ from . import __version__, api, compress
 # The encoding to use when rendering bytes as text (in four-char codes, strings, hex dumps, etc.) or reading a quoted byte string (from the command line).
 _TEXT_ENCODING = "MacRoman"
 
-# Translation table to replace ASCII non-printable characters with periods.
-_TRANSLATE_NONPRINTABLES = {k: "." for k in [*range(0x20), 0x7f]}
-
 _REZ_ATTR_NAMES = {
 	api.ResourceAttrs.resSysRef: None, # "Illegal or reserved attribute"
 	api.ResourceAttrs.resSysHeap: "sysheap",
@@ -41,6 +38,10 @@ def is_printable(char: str) -> bool:
 	"""
 	
 	return char.isprintable() or char == "\uf8ff"
+
+
+# Translation table to replace non-printable characters with periods.
+_TRANSLATE_NONPRINTABLES = {ord(c): "." for c in bytes(range(256)).decode(_TEXT_ENCODING) if not is_printable(c)}
 
 
 def bytes_unescape(string: str) -> bytes:
