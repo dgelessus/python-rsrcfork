@@ -41,7 +41,7 @@ class CompressedHeaderInfo(object):
 		try:
 			signature, header_length, compression_type, decompressed_length, remainder = STRUCT_COMPRESSED_HEADER.unpack(stream.read(STRUCT_COMPRESSED_HEADER.size))
 		except struct.error:
-			raise DecompressError(f"Invalid header")
+			raise DecompressError("Invalid header")
 		if signature != COMPRESSED_SIGNATURE:
 			raise DecompressError(f"Invalid signature: {signature!r}, expected {COMPRESSED_SIGNATURE!r}")
 		if header_length != 0x12:

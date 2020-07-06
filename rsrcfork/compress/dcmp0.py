@@ -110,7 +110,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 				# Compact representation of (part of) a segment loader jump table, as used in 'CODE' (0) resources.
 				
 				if debug:
-					print(f"Segment loader jump table entries")
+					print("Segment loader jump table entries")
 				
 				# All generated jump table entries have the same segment number.
 				segment_number_int = common.read_variable_length_integer(stream)
@@ -174,7 +174,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 				# A sequence of 16-bit signed integers, with each integer encoded as a difference relative to the previous integer. The first integer is stored explicitly.
 				
 				if debug:
-					print(f"Difference-encoded 16-bit integers")
+					print("Difference-encoded 16-bit integers")
 				
 				# The first integer is stored explicitly, as a signed value.
 				initial_int = common.read_variable_length_integer(stream)
@@ -206,7 +206,7 @@ def decompress_stream_inner(header_info: common.CompressedHeaderInfo, stream: ty
 				# A sequence of 32-bit signed integers, with each integer encoded as a difference relative to the previous integer. The first integer is stored explicitly.
 				
 				if debug:
-					print(f"Difference-encoded 32-bit integers")
+					print("Difference-encoded 32-bit integers")
 				
 				# The first integer is stored explicitly, as a signed value.
 				initial_int = common.read_variable_length_integer(stream)

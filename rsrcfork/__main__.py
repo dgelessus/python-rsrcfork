@@ -1,9 +1,7 @@
 import argparse
 import enum
 import itertools
-import pathlib
 import sys
-import textwrap
 import typing
 
 from . import __version__, api, compress
