@@ -87,6 +87,15 @@ def bytes_escape(bs: bytes, *, quote: typing.Optional[str] = None) -> str:
 	return "".join(out)
 
 
+def bytes_quote(bs: bytes, quote: str) -> str:
+	"""Convert a bytestring to a quoted string (using _TEXT_ENCODING), with non-printable characters hex-escaped.
+	
+	(We implement our own escaping mechanism here to not depend on Python's str or bytes repr.)
+	"""
+	
+	return quote + bytes_escape(bs, quote=quote) + quote
+
+
 MIN_RESOURCE_ID = -0x8000
 MAX_RESOURCE_ID = 0x7fff
 
@@ -210,8 +219,7 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 	id_desc_parts = [f"{res.id}"]
 	
 	if res.name is not None:
-		name = bytes_escape(res.name, quote='"')
-		id_desc_parts.append(f'"{name}"')
+		id_desc_parts.append(bytes_quote(res.name, '"'))
 	
 	id_desc = ", ".join(id_desc_parts)
 	
@@ -237,8 +245,8 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 	
 	desc = f"({id_desc}): {content_desc}"
 	if include_type:
-		restype = bytes_escape(res.type, quote="'")
-		desc = f"'{restype}' {desc}"
+		quoted_restype = bytes_quote(res.type, "'")
+		desc = f"{quoted_restype} {desc}"
 	return desc
 
 
@@ -302,13 +310,12 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 			parts = [str(res.id)]
 			
 			if res.name is not None:
-				name = bytes_escape(res.name, quote='"')
-				parts.append(f'"{name}"')
+				parts.append(bytes_quote(res.name, '"'))
 			
 			parts += attr_descs
 			
-			restype = bytes_escape(res.type, quote="'")
-			print(f"data '{restype}' ({', '.join(parts)}{attrs_comment}) {{")
+			quoted_restype = bytes_quote(res.type, "'")
+			print(f"data {quoted_restype} ({', '.join(parts)}{attrs_comment}) {{")
 			
 			for i in range(0, len(data), 16):
 				# Two-byte grouping is really annoying to implement.
@@ -348,8 +355,8 @@ def list_resources(resources: typing.List[api.Resource], *, sort: bool, group: s
 		resources_by_type = {restype: list(reses) for restype, reses in itertools.groupby(resources, key=lambda res: res.type)}
 		print(f"{len(resources_by_type)} resource types:")
 		for restype, restype_resources in resources_by_type.items():
-			escaped_restype = bytes_escape(restype, quote="'")
-			print(f"'{escaped_restype}': {len(restype_resources)} resources:")
+			quoted_restype = bytes_quote(restype, "'")
+			print(f"{quoted_restype}: {len(restype_resources)} resources:")
 			if sort:
 				restype_resources.sort(key=lambda res: res.id)
 			for res in restype_resources:
@@ -538,15 +545,15 @@ def do_resource_info(ns: argparse.Namespace) -> typing.NoReturn:
 			sys.exit(0)
 		
 		for res in resources:
-			restype = bytes_escape(res.type, quote="'")
-			print(f"Resource '{restype}' ({res.id}):")
+			quoted_restype = bytes_quote(res.type, "'")
+			print(f"Resource {quoted_restype} ({res.id}):")
 			
 			if res.name is None:
 				print("\tName: none (unnamed)")
 			else:
 				assert res.name_offset is not None
-				name = bytes_escape(res.name, quote='"')
-				print(f'\tName: "{name}" (at offset {res.name_offset} in name list)')
+				quoted_name = bytes_quote(res.name, '"')
+				print(f'\tName: {quoted_name} (at offset {res.name_offset} in name list)')
 			
 			attrs = decompose_flags(res.attributes)
 			if attrs:
