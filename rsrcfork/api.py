@@ -8,6 +8,7 @@ import types
 import typing
 import warnings
 
+from . import _io_utils
 from . import compress
 
 # The formats of all following structures is as described in the Inside Macintosh book (see module docstring).
@@ -393,10 +394,10 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 	def _read_exact(self, byte_count: int) -> bytes:
 		"""Read byte_count bytes from the stream and raise an exception if too few bytes are read (i. e. if EOF was hit prematurely)."""
 		
-		data = self._stream.read(byte_count)
-		if len(data) != byte_count:
-			raise InvalidResourceFileError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
-		return data
+		try:
+			return _io_utils.read_exact(self._stream, byte_count)
+		except EOFError as e:
+			raise InvalidResourceFileError(str(e))
 	
 	def _stream_unpack(self, st: struct.Struct) -> tuple:
 		"""Unpack data from the stream according to the struct st. The number of bytes to read is determined using st.size, so variable-sized structs cannot be used with this method."""

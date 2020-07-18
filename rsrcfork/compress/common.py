@@ -2,6 +2,8 @@ import io
 import struct
 import typing
 
+from .. import _io_utils
+
 
 class DecompressError(Exception):
 	"""Raised when resource data decompression fails, because the data is invalid or the compression type is not supported."""
@@ -182,10 +184,10 @@ def make_peekable(stream: typing.BinaryIO) -> "PeekableIO":
 def read_exact(stream: typing.BinaryIO, byte_count: int) -> bytes:
 	"""Read byte_count bytes from the stream and raise an exception if too few bytes are read (i. e. if EOF was hit prematurely)."""
 	
-	data = stream.read(byte_count)
-	if len(data) != byte_count:
-		raise DecompressError(f"Attempted to read {byte_count} bytes of data, but only got {len(data)} bytes")
-	return data
+	try:
+		return _io_utils.read_exact(stream, byte_count)
+	except EOFError as e:
+		raise DecompressError(str(e))
 
 
 def read_variable_length_integer(stream: typing.BinaryIO) -> int:
