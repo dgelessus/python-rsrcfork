@@ -113,8 +113,8 @@ For technical info and documentation about resource files and resources, see the
 Changelog
 ---------
 
-Version 1.7.1 (next version)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Version 1.8.0
+^^^^^^^^^^^^^
 
 * Removed the old (non-subcommand-based) CLI syntax.
 * Added filtering support to the ``list`` subcommand.
