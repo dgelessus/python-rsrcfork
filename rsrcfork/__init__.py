@@ -20,7 +20,7 @@
 # * Add a new empty section for the next version to the README.rst changelog.
 # * Commit and push the changes to master.
 
-__version__ = "1.8.0"
+__version__ = "1.8.1.dev"
 
 __all__ = [
 	"Resource",

@@ -113,6 +113,11 @@ For technical info and documentation about resource files and resources, see the
 Changelog
 ---------
 
+Version 1.8.1 (next version)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* (no changes yet)
+
 Version 1.8.0
 ^^^^^^^^^^^^^
 
