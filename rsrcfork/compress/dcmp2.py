@@ -2,6 +2,7 @@ import enum
 import struct
 import typing
 
+from .. import _io_utils
 from . import common
 
 
@@ -73,7 +74,7 @@ def _split_bits(i: int) -> typing.Tuple[bool, bool, bool, bool, bool, bool, bool
 	)
 
 
-def _decompress_untagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool = False) -> typing.Iterator[bytes]:
+def _decompress_untagged(stream: "_io_utils.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool = False) -> typing.Iterator[bytes]:
 	while True: # Loop is terminated when EOF is reached.
 		table_index_data = stream.read(1)
 		if not table_index_data:
@@ -93,7 +94,7 @@ def _decompress_untagged(stream: "common.PeekableIO", decompressed_length: int, 
 		yield table[table_index]
 
 
-def _decompress_tagged(stream: "common.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool = False) -> typing.Iterator[bytes]:
+def _decompress_tagged(stream: "_io_utils.PeekableIO", decompressed_length: int, table: typing.Sequence[bytes], *, debug: bool = False) -> typing.Iterator[bytes]:
 	while True: # Loop is terminated when EOF is reached.
 		tag_data = stream.read(1)
 		if not tag_data:
@@ -174,4 +175,4 @@ def decompress_stream(header_info: common.CompressedHeaderInfo, stream: typing.B
 	else:
 		decompress_func = _decompress_untagged
 	
-	yield from decompress_func(common.make_peekable(stream), header_info.decompressed_length, table, debug=debug)
+	yield from decompress_func(_io_utils.make_peekable(stream), header_info.decompressed_length, table, debug=debug)
