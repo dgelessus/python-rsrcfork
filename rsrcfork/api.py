@@ -130,10 +130,12 @@ class Resource(object):
 	
 	def __repr__(self) -> str:
 		try:
-			data = self.data
+			with self.open() as f:
+				data = f.read(33)
 		except compress.DecompressError:
 			decompress_ok = False
-			data = self.data_raw
+			with self.open_raw() as f:
+				data = f.read(33)
 		else:
 			decompress_ok = True
 		
@@ -207,7 +209,8 @@ class Resource(object):
 			try:
 				return self._compressed_info
 			except AttributeError:
-				self._compressed_info = compress.common.CompressedHeaderInfo.parse(self.data_raw)
+				with self.open_raw() as f:
+					self._compressed_info = compress.common.CompressedHeaderInfo.parse_stream(f)
 				return self._compressed_info
 		else:
 			return None
@@ -244,7 +247,9 @@ class Resource(object):
 			try:
 				return self._data_decompressed
 			except AttributeError:
-				self._data_decompressed = compress.decompress_parsed(self.compressed_info, self.data_raw[self.compressed_info.header_length:])
+				with self.open_raw() as f:
+					f.seek(self.compressed_info.header_length)
+					self._data_decompressed = b"".join(compress.decompress_stream_parsed(self.compressed_info, f))
 				return self._data_decompressed
 		else:
 			return self.data_raw
