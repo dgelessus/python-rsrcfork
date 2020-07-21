@@ -181,6 +181,21 @@ class Resource(object):
 			self._data_raw = self._resfile._read_exact(data_raw_length)
 			return self._data_raw
 	
+	def open_raw(self) -> typing.BinaryIO:
+		"""Create a binary file-like object that provides access to this resource's raw data, which may be compressed.
+		
+		The returned stream is read-only and seekable.
+		Multiple resource data streams can be opened at the same time for the same resource or for different resources in the same file,
+		without interfering with each other.
+		If a :class:`ResourceFile` is closed,
+		all resource data streams for that file may become unusable.
+		
+		This method is recommended over :attr:`data_raw` if the data is accessed incrementally or only partially,
+		because the stream API does not require the entire resource data to be read in advance.
+		"""
+		
+		return io.BytesIO(self.data_raw)
+	
 	@property
 	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
 		"""The compressed resource header information, or None if this resource is not compressed.
@@ -233,6 +248,21 @@ class Resource(object):
 				return self._data_decompressed
 		else:
 			return self.data_raw
+	
+	def open(self) -> typing.BinaryIO:
+		"""Create a binary file-like object that provides access to this resource's data, decompressed if necessary.
+		
+		The returned stream is read-only and seekable.
+		Multiple resource data streams can be opened at the same time for the same resource or for different resources in the same file,
+		without interfering with each other.
+		If a :class:`ResourceFile` is closed,
+		all resource data streams for that file may become unusable.
+		
+		This method is recommended over :attr:`data` if the data is accessed incrementally or only partially,
+		because the stream API does not require the entire resource data to be read (and possibly decompressed) in advance.
+		"""
+		
+		return io.BytesIO(self.data)
 
 
 class _LazyResourceMap(typing.Mapping[int, Resource]):
