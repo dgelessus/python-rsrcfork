@@ -183,7 +183,7 @@ def filter_resources(rf: api.ResourceFile, filters: typing.Sequence[str]) -> typ
 					yield res
 
 
-def hexdump(data: bytes) -> None:
+def hexdump(data: bytes) -> typing.Iterable[str]:
 	last_line = None
 	asterisk_shown = False
 	for i in range(0, len(data), 16):
@@ -192,23 +192,23 @@ def hexdump(data: bytes) -> None:
 		# This is unambiguous - to find out how many lines were collapsed this way, the user can compare the addresses of the lines before and after the asterisk.
 		if line == last_line:
 			if not asterisk_shown:
-				print("*")
+				yield "*"
 				asterisk_shown = True
 		else:
 			line_hex_left = " ".join(f"{byte:02x}" for byte in line[:8])
 			line_hex_right = " ".join(f"{byte:02x}" for byte in line[8:])
 			line_char = line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES)
-			print(f"{i:08x}  {line_hex_left:<{8*2+7}}  {line_hex_right:<{8*2+7}}  |{line_char}|")
+			yield f"{i:08x}  {line_hex_left:<{8*2+7}}  {line_hex_right:<{8*2+7}}  |{line_char}|"
 			asterisk_shown = False
 		last_line = line
 	
 	if data:
-		print(f"{len(data):08x}")
+		yield f"{len(data):08x}"
 
 
-def raw_hexdump(data: bytes) -> None:
+def raw_hexdump(data: bytes) -> typing.Iterable[str]:
 	for i in range(0, len(data), 16):
-		print(" ".join(f"{byte:02x}" for byte in data[i:i + 16]))
+		yield " ".join(f"{byte:02x}" for byte in data[i:i + 16])
 
 
 def translate_text(data: bytes) -> str:
@@ -276,7 +276,8 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 			desc = describe_resource(res, include_type=True, decompress=decompress)
 			print(f"Resource {desc}:")
 			if format == "dump":
-				hexdump(data)
+				for line in hexdump(data):
+					print(line)
 			elif format == "dump-text":
 				print(translate_text(data))
 			else:
@@ -285,7 +286,8 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 		elif format == "hex":
 			# Data only as hex
 			
-			raw_hexdump(data)
+			for line in raw_hexdump(data):
+				print(line)
 		elif format == "raw":
 			# Data only as raw bytes
 			
@@ -465,18 +467,20 @@ def do_read_header(ns: argparse.Namespace) -> typing.NoReturn:
 			if ns.format == "dump":
 				dump_func = hexdump
 			elif ns.format == "dump-text":
-				def dump_func(data: bytes) -> None:
-					print(translate_text(data))
+				def dump_func(data: bytes) -> typing.Iterable[str]:
+					yield translate_text(data)
 			else:
 				raise AssertionError(f"Unhandled --format: {ns.format!r}")
 			
 			if ns.part in {"system", "all"}:
 				print("System-reserved header data:")
-				dump_func(rf.header_system_data)
+				for line in dump_func(rf.header_system_data):
+					print(line)
 			
 			if ns.part in {"application", "all"}:
 				print("Application-specific header data:")
-				dump_func(rf.header_application_data)
+				for line in dump_func(rf.header_application_data):
+					print(line)
 		elif ns.format in {"hex", "raw"}:
 			if ns.part == "system":
 				data = rf.header_system_data
@@ -488,7 +492,8 @@ def do_read_header(ns: argparse.Namespace) -> typing.NoReturn:
 				raise AssertionError(f"Unhandled --part: {ns.part!r}")
 			
 			if ns.format == "hex":
-				raw_hexdump(data)
+				for line in raw_hexdump(data):
+					print(line)
 			elif ns.format == "raw":
 				sys.stdout.buffer.write(data)
 			else:
@@ -502,10 +507,12 @@ def do_read_header(ns: argparse.Namespace) -> typing.NoReturn:
 def do_info(ns: argparse.Namespace) -> typing.NoReturn:
 	with open_resource_file(ns.file, fork=ns.fork) as rf:
 		print("System-reserved header data:")
-		hexdump(rf.header_system_data)
+		for line in hexdump(rf.header_system_data):
+			print(line)
 		print()
 		print("Application-specific header data:")
-		hexdump(rf.header_application_data)
+		for line in hexdump(rf.header_application_data):
+			print(line)
 		print()
 		
 		print(f"Resource data starts at {rf.data_offset:#x} and is {rf.data_length:#x} bytes long")
