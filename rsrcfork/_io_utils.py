@@ -49,6 +49,12 @@ class SubStream(io.BufferedIOBase, typing.BinaryIO):
 		if self._start_offset + self._length > outer_stream_length:
 			raise ValueError(f"start_offset ({self._start_offset}) or length ({self._length}) too high: outer stream must be at least {self._start_offset + self._length} bytes long, but is only {outer_stream_length} bytes")
 	
+	# This override does nothing,
+	# but is needed to make mypy happy,
+	# otherwise it complains (apparently incorrectly) about the __enter__ definitions from IOBase and BinaryIO being incompatible with each other.
+	def __enter__(self: "SubStream") -> "SubStream":
+		return super().__enter__()
+	
 	def seekable(self) -> bool:
 		return True
 	
