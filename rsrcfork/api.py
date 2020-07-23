@@ -109,6 +109,7 @@ class Resource(object):
 	_name: typing.Optional[bytes]
 	attributes: ResourceAttrs
 	data_raw_offset: int
+	_length_raw: int
 	_data_raw: bytes
 	_compressed_info: compress.common.CompressedHeaderInfo
 	_data_decompressed: bytes
@@ -178,9 +179,8 @@ class Resource(object):
 		try:
 			return self._data_raw
 		except AttributeError:
-			self._resfile._stream.seek(self._resfile.data_offset + self.data_raw_offset)
-			(data_raw_length,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
-			self._data_raw = self._resfile._read_exact(data_raw_length)
+			with self.open_raw() as f:
+				self._data_raw = f.read()
 			return self._data_raw
 	
 	def open_raw(self) -> typing.BinaryIO:
@@ -196,7 +196,7 @@ class Resource(object):
 		because the stream API does not require the entire resource data to be read in advance.
 		"""
 		
-		return io.BytesIO(self.data_raw)
+		return _io_utils.SubStream(self._resfile._stream, self._resfile.data_offset + self.data_raw_offset + STRUCT_RESOURCE_DATA_HEADER.size, self.length_raw)
 	
 	@property
 	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
@@ -222,7 +222,12 @@ class Resource(object):
 		Accessing this attribute may be faster than computing len(self.data_raw) manually.
 		"""
 		
-		return len(self.data_raw)
+		try:
+			return self._length_raw
+		except AttributeError:
+			self._resfile._stream.seek(self._resfile.data_offset + self.data_raw_offset)
+			(self._length_raw,) = self._resfile._stream_unpack(STRUCT_RESOURCE_DATA_HEADER)
+			return self._length_raw
 	
 	@property
 	def length(self) -> int:

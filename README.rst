@@ -119,13 +119,6 @@ Version 1.8.1 (next version)
 * Added ``open`` and ``open_raw`` methods to ``Resource`` objects,
   for stream-based access to resource data.
 
-  * These methods are currently implemented using simple ``io.BytesIO`` wrappers around the resource data,
-    so there is currently no performance difference between ``open``/``open_raw`` and ``data``/``data_raw``.
-    In the future,
-    the stream-based API implementations will be optimized
-    to allow efficient access to parts of the resource data
-    without having to read the entire data in advance.
-
 Version 1.8.0
 ^^^^^^^^^^^^^
 

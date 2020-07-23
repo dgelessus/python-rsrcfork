@@ -19,6 +19,72 @@ def read_exact(stream: typing.BinaryIO, byte_count: int) -> bytes:
 	return data
 
 
+class SubStream(io.BufferedIOBase, typing.BinaryIO):
+	"""A read-only stream that provides a view over a range of data from another stream."""
+	
+	_outer_stream: typing.BinaryIO
+	_start_offset: int
+	_length: int
+	_seek_position: int
+	
+	def __init__(self, stream: typing.BinaryIO, start_offset: int, length: int) -> None:
+		"""Create a new stream that exposes the specified range of data from ``stream``.
+		
+		:param stream: The underlying binary stream from which to read the data.
+			The stream must be readable and seekable and contain at least ``start_offset + length`` bytes of data.
+		:param start_offset: The absolute offset in the parent stream at which the data to expose starts.
+			This offset will correspond to offset 0 in the new :class:`SubStream`.
+		:param length: The length of the data to expose.
+			This is the highest valid offset in the new :class:`SubStream`.
+		"""
+		
+		super().__init__()
+		
+		self._outer_stream = stream
+		self._start_offset = start_offset
+		self._length = length
+		self._seek_position = 0
+		
+		outer_stream_length = self._outer_stream.seek(0, io.SEEK_END)
+		if self._start_offset + self._length > outer_stream_length:
+			raise ValueError(f"start_offset ({self._start_offset}) or length ({self._length}) too high: outer stream must be at least {self._start_offset + self._length} bytes long, but is only {outer_stream_length} bytes")
+	
+	def seekable(self) -> bool:
+		return True
+	
+	def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+		if whence == io.SEEK_SET:
+			if offset < 0:
+				raise ValueError(f"Negative seek offset not allowed with SEEK_SET: {offset}")
+			
+			self._seek_position = offset
+		elif whence == io.SEEK_CUR:
+			self._seek_position += offset
+		elif whence == io.SEEK_END:
+			self._seek_position = self._length - offset
+		else:
+			raise ValueError(f"Invalid whence value: {whence}")
+		
+		self._seek_position = max(0, min(self._length, self._seek_position))
+		
+		return self._seek_position
+	
+	def tell(self) -> int:
+		return self._seek_position
+	
+	def readable(self) -> bool:
+		return True
+	
+	def read(self, size: typing.Optional[int] = -1) -> bytes:
+		if size is None or size < 0 or size > self._length - self._seek_position:
+			size = self._length - self._seek_position
+		
+		self._outer_stream.seek(self._start_offset + self._seek_position)
+		res = self._outer_stream.read(size)
+		self._seek_position += len(res)
+		return res
+
+
 if typing.TYPE_CHECKING:
 	class PeekableIO(typing.Protocol):
 		"""Minimal protocol for binary IO streams that support the peek method.
