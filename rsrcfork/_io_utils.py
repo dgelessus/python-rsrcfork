@@ -19,7 +19,7 @@ def read_exact(stream: typing.BinaryIO, byte_count: int) -> bytes:
 	return data
 
 
-class SubStream(io.BufferedIOBase, typing.BinaryIO):
+class _SubStream(io.RawIOBase):
 	"""A read-only stream that provides a view over a range of data from another stream."""
 	
 	_outer_stream: typing.BinaryIO
@@ -28,16 +28,6 @@ class SubStream(io.BufferedIOBase, typing.BinaryIO):
 	_seek_position: int
 	
 	def __init__(self, stream: typing.BinaryIO, start_offset: int, length: int) -> None:
-		"""Create a new stream that exposes the specified range of data from ``stream``.
-		
-		:param stream: The underlying binary stream from which to read the data.
-			The stream must be readable and seekable and contain at least ``start_offset + length`` bytes of data.
-		:param start_offset: The absolute offset in the parent stream at which the data to expose starts.
-			This offset will correspond to offset 0 in the new :class:`SubStream`.
-		:param length: The length of the data to expose.
-			This is the highest valid offset in the new :class:`SubStream`.
-		"""
-		
 		super().__init__()
 		
 		self._outer_stream = stream
@@ -48,12 +38,6 @@ class SubStream(io.BufferedIOBase, typing.BinaryIO):
 		outer_stream_length = self._outer_stream.seek(0, io.SEEK_END)
 		if self._start_offset + self._length > outer_stream_length:
 			raise ValueError(f"start_offset ({self._start_offset}) or length ({self._length}) too high: outer stream must be at least {self._start_offset + self._length} bytes long, but is only {outer_stream_length} bytes")
-	
-	# This override does nothing,
-	# but is needed to make mypy happy,
-	# otherwise it complains (apparently incorrectly) about the __enter__ definitions from IOBase and BinaryIO being incompatible with each other.
-	def __enter__(self: "SubStream") -> "SubStream":
-		return super().__enter__()
 	
 	def seekable(self) -> bool:
 		return True
@@ -81,14 +65,32 @@ class SubStream(io.BufferedIOBase, typing.BinaryIO):
 	def readable(self) -> bool:
 		return True
 	
-	def read(self, size: typing.Optional[int] = -1) -> bytes:
-		if size is None or size < 0 or size > self._length - self._seek_position:
-			size = self._length - self._seek_position
-		
+	def readall(self) -> bytes:
 		self._outer_stream.seek(self._start_offset + self._seek_position)
-		res = self._outer_stream.read(size)
-		self._seek_position += len(res)
-		return res
+		return self._outer_stream.read(self._length - self._seek_position)
+	
+	def readinto(self, buffer: bytearray) -> typing.Optional[int]:
+		size = min(len(buffer), self._length - self._seek_position)
+		self._outer_stream.seek(self._start_offset + self._seek_position)
+		data = self._outer_stream.read(size)
+		self._seek_position += len(data)
+		buffer[:len(data)] = data
+		return len(data)
+
+
+def make_substream(stream: typing.BinaryIO, start_offset: int, length: int) -> typing.BinaryIO:
+	"""Create a read-only stream that exposes the specified range of data from ``stream``.
+	
+	:param stream: The underlying binary stream from which to read the data.
+		The stream must be readable and seekable and contain at least ``start_offset + length`` bytes of data.
+	:param start_offset: The absolute offset in the parent stream at which the data to expose starts.
+		This offset will correspond to offset 0 in the returned stream.
+	:param length: The length of the data to expose.
+		This is the highest valid offset in the returned stream.
+	"""
+	
+	# For some reason, mypy thinks that io.BufferedReader is not a typing.BinaryIO.
+	return typing.cast(typing.BinaryIO, io.BufferedReader(_SubStream(stream, start_offset, length)))
 
 
 if typing.TYPE_CHECKING:

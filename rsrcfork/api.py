@@ -196,7 +196,7 @@ class Resource(object):
 		because the stream API does not require the entire resource data to be read in advance.
 		"""
 		
-		return _io_utils.SubStream(self._resfile._stream, self._resfile.data_offset + self.data_raw_offset + STRUCT_RESOURCE_DATA_HEADER.size, self.length_raw)
+		return _io_utils.make_substream(self._resfile._stream, self._resfile.data_offset + self.data_raw_offset + STRUCT_RESOURCE_DATA_HEADER.size, self.length_raw)
 	
 	@property
 	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
