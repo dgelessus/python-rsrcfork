@@ -335,22 +335,22 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 				quoted_restype = bytes_quote(res.type, "'")
 				print(f"data {quoted_restype} ({', '.join(parts)}{attrs_comment}) {{")
 				
-				line = f.read(16)
-				while line:
+				bytes_line = f.read(16)
+				while bytes_line:
 					# Two-byte grouping is really annoying to implement.
 					groups = []
 					for j in range(0, 16, 2):
-						if j >= len(line):
+						if j >= len(bytes_line):
 							break
-						elif j+1 >= len(line):
-							groups.append(f"{line[j]:02X}")
+						elif j+1 >= len(bytes_line):
+							groups.append(f"{bytes_line[j]:02X}")
 						else:
-							groups.append(f"{line[j]:02X}{line[j+1]:02X}")
+							groups.append(f"{bytes_line[j]:02X}{bytes_line[j+1]:02X}")
 					
 					s = f'$"{" ".join(groups)}"'
-					comment = "/* " + line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES) + " */"
+					comment = "/* " + bytes_line.decode(_TEXT_ENCODING).translate(_TRANSLATE_NONPRINTABLES) + " */"
 					print(f"\t{s:<54s}{comment}")
-					line = f.read(16)
+					bytes_line = f.read(16)
 				
 				print("};")
 				print()
