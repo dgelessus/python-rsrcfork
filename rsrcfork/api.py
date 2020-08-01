@@ -252,9 +252,8 @@ class Resource(object):
 			try:
 				return self._data_decompressed
 			except AttributeError:
-				with self.open_raw() as f:
-					f.seek(self.compressed_info.header_length)
-					self._data_decompressed = b"".join(compress.decompress_stream_parsed(self.compressed_info, f))
+				with self.open() as f:
+					self._data_decompressed = f.read()
 				return self._data_decompressed
 		else:
 			return self.data_raw
@@ -272,7 +271,12 @@ class Resource(object):
 		because the stream API does not require the entire resource data to be read (and possibly decompressed) in advance.
 		"""
 		
-		return io.BytesIO(self.data)
+		if self.compressed_info is None:
+			return self.open_raw()
+		else:
+			f = self.open_raw()
+			f.seek(self.compressed_info.header_length)
+			return compress.DecompressingStream(f, self.compressed_info, close_stream=True)
 
 
 class _LazyResourceMap(typing.Mapping[int, Resource]):
