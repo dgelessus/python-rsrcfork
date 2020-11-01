@@ -307,7 +307,7 @@ def show_filtered_resources(resources: typing.Sequence[api.Resource], format: st
 			elif format == "raw":
 				# Data only as raw bytes
 				
-				shutil.copyfileobj(f, sys.stdout.buffer) # type: ignore # Workaround for python/mypy#8962
+				shutil.copyfileobj(f, sys.stdout.buffer)
 			elif format == "derez":
 				# Like DeRez with no resource definitions
 				
