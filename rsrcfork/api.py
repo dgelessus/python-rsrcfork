@@ -179,8 +179,8 @@ class Resource(object):
 		try:
 			return self._data_raw
 		except AttributeError:
-			with self.open_raw() as f:
-				self._data_raw = f.read()
+			self._resfile._stream.seek(self._resfile.data_offset + self.data_raw_offset + STRUCT_RESOURCE_DATA_HEADER.size)
+			self._data_raw = _io_utils.read_exact(self._resfile._stream, self.length_raw)
 			return self._data_raw
 	
 	def open_raw(self) -> typing.BinaryIO:
@@ -196,7 +196,7 @@ class Resource(object):
 		because the stream API does not require the entire resource data to be read in advance.
 		"""
 		
-		return _io_utils.make_substream(self._resfile._stream, self._resfile.data_offset + self.data_raw_offset + STRUCT_RESOURCE_DATA_HEADER.size, self.length_raw)
+		return io.BytesIO(self.data_raw)
 	
 	@property
 	def compressed_info(self) -> typing.Optional[compress.common.CompressedHeaderInfo]:
@@ -252,8 +252,9 @@ class Resource(object):
 			try:
 				return self._data_decompressed
 			except AttributeError:
-				with self.open() as f:
-					self._data_decompressed = f.read()
+				with self.open_raw() as compressed_f:
+					compressed_f.seek(self.compressed_info.header_length)
+					self._data_decompressed = b"".join(compress.decompress_stream_parsed(self.compressed_info, compressed_f))
 				return self._data_decompressed
 		else:
 			return self.data_raw
@@ -271,12 +272,7 @@ class Resource(object):
 		because the stream API does not require the entire resource data to be read (and possibly decompressed) in advance.
 		"""
 		
-		if self.compressed_info is None:
-			return self.open_raw()
-		else:
-			f = self.open_raw()
-			f.seek(self.compressed_info.header_length)
-			return compress.DecompressingStream(f, self.compressed_info, close_stream=True)
+		return io.BytesIO(self.data)
 
 
 class _LazyResourceMap(typing.Mapping[int, Resource]):
