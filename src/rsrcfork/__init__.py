@@ -2,7 +2,7 @@
 
 # To release a new version:
 # * Remove the .dev suffix from the version number in this file.
-# * Update the changelog in the README.rst (rename the "next version" section to the correct version number).
+# * Update the changelog in the README.md (rename the "next version" section to the correct version number).
 # * Remove the ``dist`` directory (if it exists) to clean up any old release files.
 # * Run ``python3 setup.py sdist bdist_wheel`` to build the release files.
 # * Run ``python3 -m twine check dist/*`` to check the release files.
@@ -12,12 +12,12 @@
 # * Fast-forward the release branch to the new release commit.
 # * Push the master and release branches.
 # * Upload the release files to PyPI using ``python3 -m twine upload dist/*``.
-# * On the GitHub repo's Releases page, edit the new release tag and add the relevant changelog section from the README.rst. (Note: The README is in reStructuredText format, but GitHub's release notes use Markdown, so it may be necessary to adjust the markup syntax.)
+# * On the GitHub repo's Releases page, edit the new release tag and add the relevant changelog section from the README.md.
 
 # After releasing:
 # * (optional) Remove the build and dist directories from the previous release as they are no longer needed.
 # * Bump the version number in this file to the next version and add a .dev suffix.
-# * Add a new empty section for the next version to the README.rst changelog.
+# * Add a new empty section for the next version to the README.md changelog.
 # * Commit and push the changes to master.
 
 __version__ = "1.8.1.dev"
