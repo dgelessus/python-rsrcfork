@@ -62,7 +62,7 @@ $ python3 -m pip install .
 >>> rf
 <rsrcfork.ResourceFile at 0x1046e6048, attributes ResourceFileAttrs.0, containing 4 resource types: [b'utxt', b'utf8', b'TEXT', b'drag']>
 >>> rf[b"TEXT"]
-<rsrcfork.ResourceFile._LazyResourceMap at 0x10470ed30 containing one resource: rsrcfork.Resource(type=b'TEXT', id=256, name=None, attributes=ResourceAttrs.0, data=b'Here is some text')>
+<Resource map for type b'TEXT', containing one resource: <Resource type b'TEXT', id 256, name None, attributes ResourceAttrs.0, data b'Here is some text'>>
 ```
 
 ### Automatic selection of data/resource fork
@@ -80,24 +80,24 @@ $ python3 -m pip install .
 ### Command-line interface
 
 ```sh
-$ python3 -m rsrcfork /Users/Shared/Test.textClipping
+$ rsrcfork list /Users/Shared/Test.textClipping
 4 resource types:
-'utxt': 1 resources:
-(256): 34 bytes
-
-'utf8': 1 resources:
-(256): 17 bytes
-
 'TEXT': 1 resources:
 (256): 17 bytes
 
 'drag': 1 resources:
 (128): 64 bytes
 
-$ python3 -m rsrcfork /Users/Shared/Test.textClipping "'TEXT' (256)"
+'utf8': 1 resources:
+(256): 17 bytes
+
+'utxt': 1 resources:
+(256): 34 bytes
+
+$ rsrcfork read /Users/Shared/Test.textClipping "'TEXT' (256)"
 Resource 'TEXT' (256): 17 bytes:
-00000000 48 65 72 65 20 69 73 20 73 6f 6d 65 20 74 65 78 |Here is some tex|
-00000010 74                                              |t|
+00000000  48 65 72 65 20 69 73 20  73 6f 6d 65 20 74 65 78  |Here is some tex|
+00000010  74                                                |t|
 00000011
 ```
 
