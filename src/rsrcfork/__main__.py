@@ -31,6 +31,22 @@ def decompose_flags(value: F) -> typing.Sequence[F]:
 	return [bit for bit in type(value) if bit in value]
 
 
+def join_flag_names(flags: typing.Iterable[F], sep: str = " | ") -> str:
+	"""Join an iterable of enum.Flag instances into a string representation based on their names.
+	
+	All values in ``flags`` should be named constants.
+	"""
+	
+	names: typing.List[str] = []
+	for flag in flags:
+		name = flag.name
+		if name is None:
+			names.append(str(flag))
+		else:
+			names.append(name)
+	return sep.join(names)
+
+
 def is_printable(char: str) -> bool:
 	"""Determine whether a character is printable for our purposes.
 	
@@ -254,7 +270,7 @@ def describe_resource(res: api.Resource, *, include_type: bool, decompress: bool
 	
 	attrs = decompose_flags(res.attributes)
 	if attrs:
-		content_desc_parts.append(" | ".join(attr.name for attr in attrs))
+		content_desc_parts.append(join_flag_names(attrs))
 	
 	content_desc = ", ".join(content_desc_parts)
 	
@@ -537,7 +553,7 @@ def do_info(ns: argparse.Namespace) -> typing.NoReturn:
 		print(f"Resource map starts at {rf.map_offset:#x} and is {rf.map_length:#x} bytes long")
 		attrs = decompose_flags(rf.file_attributes)
 		if attrs:
-			attrs_desc = " | ".join(attr.name for attr in attrs)
+			attrs_desc = join_flag_names(attrs)
 		else:
 			attrs_desc = "(none)"
 		print(f"Resource map attributes: {attrs_desc}")
@@ -582,7 +598,7 @@ def do_resource_info(ns: argparse.Namespace) -> typing.NoReturn:
 			
 			attrs = decompose_flags(res.attributes)
 			if attrs:
-				attrs_desc = " | ".join(attr.name for attr in attrs)
+				attrs_desc = join_flag_names(attrs)
 			else:
 				attrs_desc = "(none)"
 			print(f"\tAttributes: {attrs_desc}")
