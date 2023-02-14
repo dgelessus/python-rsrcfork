@@ -152,12 +152,12 @@ class Resource(object):
 	
 	@property
 	def resource_type(self) -> bytes:
-		warnings.warn(DeprecationWarning("The resource_type attribute has been deprecated and will be removed in a future version. Please use the type attribute instead."))
+		warnings.warn(DeprecationWarning("The resource_type attribute has been deprecated and will be removed in a future version. Please use the type attribute instead."), stacklevel=2)
 		return self.type
 	
 	@property
 	def resource_id(self) -> int:
-		warnings.warn(DeprecationWarning("The resource_id attribute has been deprecated and will be removed in a future version. Please use the id attribute instead."))
+		warnings.warn(DeprecationWarning("The resource_id attribute has been deprecated and will be removed in a future version. Please use the id attribute instead."), stacklevel=2)
 		return self.id
 	
 	@property
@@ -369,7 +369,7 @@ class ResourceFile(typing.Mapping[bytes, typing.Mapping[int, Resource]], typing.
 				fork = "rsrc"
 			else:
 				fork = "data"
-			warnings.warn(DeprecationWarning(f"The rsrcfork parameter has been deprecated and will be removed in a future version. Please use fork={fork!r} instead of rsrcfork={kwargs['rsrcfork']!r}."))
+			warnings.warn(DeprecationWarning(f"The rsrcfork parameter has been deprecated and will be removed in a future version. Please use fork={fork!r} instead of rsrcfork={kwargs['rsrcfork']!r}."), stacklevel=2)
 			del kwargs["rsrcfork"]
 		
 		if fork == "auto":
