@@ -46,8 +46,8 @@ class CompressedHeaderInfo(object):
 			raise DecompressError("Invalid header")
 		if signature != COMPRESSED_SIGNATURE:
 			raise DecompressError(f"Invalid signature: {signature!r}, expected {COMPRESSED_SIGNATURE!r}")
-		if header_length != 0x12:
-			raise DecompressError(f"Unsupported header length: 0x{header_length:>04x}, expected 0x12")
+		if header_length not in {0, 0x12}:
+			raise DecompressError(f"Unsupported header length value: 0x{header_length:>04x}, expected 0x12 or 0")
 		
 		if compression_type == COMPRESSED_TYPE_8:
 			working_buffer_fractional_size, expansion_buffer_size, dcmp_id, reserved = STRUCT_COMPRESSED_TYPE_8_HEADER.unpack(remainder)

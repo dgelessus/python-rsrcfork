@@ -128,6 +128,8 @@ see the ["resource forks" section of the mac_file_format_docs repo](https://gith
 
 * Added `open` and `open_raw` methods to `Resource` objects,
   for stream-based access to resource data.
+* Fixed reading of compressed resource headers with the header length field incorrectly set to 0
+  (because real Mac OS apparently accepts this).
 
 ### Version 1.8.0
 
